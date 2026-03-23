@@ -7,7 +7,7 @@ import { fadeInUp, hoverLift } from '@/lib/motion';
 const toDateStr = (d: Date) => d.toISOString().split('T')[0];
 
 const AnalyticsScreen = () => {
-  const { tasks, focusLogs } = useStore();
+  const { tasks, focusLogs, weeklyStats } = useStore();
 
   const last7Days = useMemo(() => {
     const days: { dateStr: string; label: string }[] = [];
@@ -60,7 +60,7 @@ const AnalyticsScreen = () => {
   const maxFocus = Math.max(...focusData.map((d) => d.minutes), 1);
 
   return (
-    <div className="mx-auto max-w-lg px-5 pb-28 pt-14">
+    <div className="mx-auto max-w-2xl px-5 pb-28 pt-14">
       <motion.div {...fadeInUp} className="mb-8">
         <p className="text-subhead uppercase tracking-widest">Insights</p>
         <h1 className="text-headline mt-1">Analytics</h1>
@@ -69,19 +69,19 @@ const AnalyticsScreen = () => {
       {/* Stats bento */}
       <motion.div {...fadeInUp} className="grid grid-cols-3 gap-3 mb-6">
         <motion.div {...hoverLift} className="glass-card p-4 flex flex-col items-center justify-center">
-          <TrendingUp className="h-4 w-4 text-muted-foreground mb-2" />
-          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{totalCompleted}</span>
-          <span className="text-caption mt-0.5">Done</span>
+          <Clock className="h-4 w-4 text-muted-foreground mb-2" />
+          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{weeklyStats?.focusHours ?? totalDeepWorkHours}h</span>
+          <span className="text-caption mt-0.5">Focus Hours</span>
         </motion.div>
         <motion.div {...hoverLift} className="glass-card p-4 flex flex-col items-center justify-center">
-          <Clock className="h-4 w-4 text-muted-foreground mb-2" />
-          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{totalDeepWorkHours}h</span>
-          <span className="text-caption mt-0.5">Focus</span>
+          <TrendingUp className="h-4 w-4 text-muted-foreground mb-2" />
+          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{weeklyStats?.tasksCompleted ?? totalCompleted}</span>
+          <span className="text-caption mt-0.5">Tasks Completed</span>
         </motion.div>
         <motion.div {...hoverLift} className="glass-card p-4 flex flex-col items-center justify-center">
           <Flame className="h-4 w-4 text-muted-foreground mb-2" />
-          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{streak}</span>
-          <span className="text-caption mt-0.5">Streak</span>
+          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{weeklyStats?.consistencyScore ?? streak}%</span>
+          <span className="text-caption mt-0.5">Consistency Score</span>
         </motion.div>
       </motion.div>
 

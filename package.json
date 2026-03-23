@@ -63,7 +63,10 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
     "zod": "^3.25.76",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.12",
+    "dexie": "^3.2.4",
+    "pdfjs-dist": "^3.15.141",
+    "@xenova/transformers": "^3.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

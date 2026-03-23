@@ -17,6 +17,21 @@ const categoryColors: Record<Task['category'], string> = {
 };
 
 const TaskCard = ({ task, onToggle, isMissed }: TaskCardProps) => {
+  const successChime = () => {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = 660;
+    gain.gain.value = 0.09;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.18);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    osc.stop(ctx.currentTime + 0.18);
+  };
+
   return (
     <motion.div
       layout
@@ -25,7 +40,12 @@ const TaskCard = ({ task, onToggle, isMissed }: TaskCardProps) => {
       className={`glass-card flex items-center gap-4 px-5 py-4 cursor-pointer select-none ${
         task.completed ? 'opacity-50' : ''
       }`}
-      onClick={() => onToggle(task.id)}
+      onClick={() => {
+        onToggle(task.id);
+        if (!task.completed) {
+          successChime();
+        }
+      }}
     >
       <motion.div
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${

@@ -1,18 +1,29 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export interface ResourceLink {
+  id: string;
+  label: string;
+  url: string;
+  type: string;
+}
+
 export interface Task {
   id: string;
   title: string;
   time: string | null;
   date: string | null; // YYYY-MM-DD or null (means "today")
-  category: 'work' | 'personal' | 'health' | 'learning';
+  category: 'work' | 'personal' | 'health' | 'learning' | 'education';
   subcategory: string;
+  subCategory?: 'study' | 'homework';
   completed: boolean;
   // Education-specific
   eduType?: 'study' | 'homework';
   resourceLinks?: string[];
+  resources?: ResourceLink[];
   quickNotes?: string;
+  notes?: string;
+  stability?: number; // 0-100 for mastery
 }
 
 export interface FocusSession {
@@ -22,11 +33,32 @@ export interface FocusSession {
   assignedTaskId: string | null;
 }
 
+export interface ActiveSession {
+  taskId: string | null;
+  startTime: number | null;
+  timeLeft: number;
+  isPaused: boolean;
+  mode: 'work' | 'break';
+}
+
+export interface SessionHistory {
+  date: string;
+  duration: number;
+  taskId: string | null;
+  completed: boolean;
+}
+
 export interface FocusLog {
   id: string;
   date: string; // YYYY-MM-DD
   durationMinutes: number;
   taskId: string | null;
+}
+
+export interface WeeklyStats {
+  focusHours: number;
+  tasksCompleted: number;
+  consistencyScore: number;
 }
 
 export interface Settings {
@@ -37,7 +69,15 @@ export interface Settings {
 interface StoreState {
   tasks: Task[];
   focusSession: FocusSession;
+  activeSession: ActiveSession;
   focusLogs: FocusLog[];
+  sessionHistory: SessionHistory[];
+  weeklyStats: WeeklyStats;
+  xp: number;
+  level: number;
+  streak: number;
+  lockdown: boolean;
+  examDate: string;
   settings: Settings;
   selectedDate: string; // YYYY-MM-DD
   addTask: (task: Omit<Task, 'id' | 'completed'>) => void;
@@ -45,9 +85,16 @@ interface StoreState {
   removeTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   setFocusSession: (session: Partial<FocusSession>) => void;
+  setActiveSession: (session: Partial<ActiveSession>) => void;
   addFocusLog: (log: Omit<FocusLog, 'id'>) => void;
+  addSessionToHistory: (entry: Omit<SessionHistory, 'date'> & { date?: string }) => void;
+  updateWeeklyStats: () => void;
   updateSettings: (settings: Partial<Settings>) => void;
   setSelectedDate: (date: string) => void;
+  setLockdown: (enabled: boolean) => void;
+  setExamDate: (date: string) => void;
+  grantXP: (amount: number) => void;
+  updateTaskStability: (id: string, stability: number) => void;
 }
 
 const toDateStr = (d: Date) => d.toISOString().split('T')[0];
@@ -75,43 +122,166 @@ const defaultFocusLogs: FocusLog[] = [
   { id: 'fl6', date: toDateStr(new Date(Date.now() - 1 * 86400000)), durationMinutes: 25, taskId: null },
 ];
 
+const initialWeeklyStats: WeeklyStats = {
+  focusHours: 0,
+  tasksCompleted: 0,
+  consistencyScore: 0,
+};
+
+const calculateWeeklyStats = (tasks: Task[], focusLogs: FocusLog[]): WeeklyStats => {
+  const now = new Date();
+  const last7 = new Set<string>();
+  let focusMinutes = 0;
+  let completed = 0;
+  for (let i = 0; i < 7; i += 1) {
+    const d = toDateStr(new Date(Date.now() - i * 86400000));
+    last7.add(d);
+  }
+
+  focusLogs.forEach((log) => {
+    if (last7.has(log.date)) focusMinutes += log.durationMinutes;
+  });
+
+  const daysWithActivity = new Set<string>();
+  tasks.forEach((t) => {
+    const d = t.date || toDateStr(now);
+    if (last7.has(d)) {
+      if (t.completed) {
+        completed += 1;
+        daysWithActivity.add(d);
+      }
+    }
+  });
+
+  focusLogs.forEach((log) => {
+    if (last7.has(log.date) && log.durationMinutes > 0) daysWithActivity.add(log.date);
+  });
+
+  return {
+    focusHours: Number((focusMinutes / 60).toFixed(1)),
+    tasksCompleted: completed,
+    consistencyScore: Number(((daysWithActivity.size / 7) * 100).toFixed(0)),
+  };
+};
+
 export const useStore = create<StoreState>()(
   persist(
     (set) => ({
       tasks: defaultTasks,
       focusSession: { isActive: false, timeLeft: 25 * 60, mode: 'work', assignedTaskId: null },
+      activeSession: { taskId: null, startTime: null, timeLeft: 25 * 60, isPaused: true, mode: 'work' },
       focusLogs: defaultFocusLogs,
+      sessionHistory: [],
+      weeklyStats: initialWeeklyStats,
+      xp: 0,
+      level: 1,
+      streak: 0,
+      lockdown: false,
+      examDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
       settings: { timeFormat: '24h', sounds: false },
       selectedDate: today,
 
       addTask: (task) =>
-        set((state) => ({
-          tasks: [...state.tasks, { ...task, id: crypto.randomUUID(), completed: false }],
-        })),
+        set((state) => {
+          const nextTasks = [...state.tasks, { ...task, id: crypto.randomUUID(), completed: false }];
+          return {
+            tasks: nextTasks,
+            weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs),
+          };
+        }),
 
       toggleTask: (id) =>
-        set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
-        })),
+        set((state) => {
+          const nextTasks = state.tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
+          return {
+            tasks: nextTasks,
+            weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs),
+          };
+        }),
 
       removeTask: (id) =>
         set((state) => ({
           tasks: state.tasks.filter((t) => t.id !== id),
+          weeklyStats: calculateWeeklyStats(state.tasks.filter((t) => t.id !== id), state.focusLogs),
         })),
 
       updateTask: (id, updates) =>
-        set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-        })),
+        set((state) => {
+          const nextTasks = state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t));
+          return {
+            tasks: nextTasks,
+            weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs),
+          };
+        }),
 
       setFocusSession: (session) =>
         set((state) => ({
           focusSession: { ...state.focusSession, ...session },
         })),
 
-      addFocusLog: (log) =>
+      setActiveSession: (session) =>
         set((state) => ({
-          focusLogs: [...state.focusLogs, { ...log, id: crypto.randomUUID() }],
+          activeSession: { ...state.activeSession, ...session },
+        })),
+
+      addFocusLog: (log) =>
+        set((state) => {
+          const nextLogs = [...state.focusLogs, { ...log, id: crypto.randomUUID() }];
+          const xpGain = Math.round(log.durationMinutes / 25 * 100);
+          const nextXP = state.xp + xpGain;
+          const nextLevel = Math.floor(nextXP / 1000) + 1;
+          return {
+            focusLogs: nextLogs,
+            weeklyStats: calculateWeeklyStats(state.tasks, nextLogs),
+            xp: nextXP,
+            level: nextLevel,
+            streak: state.streak + 1,
+          };
+        }),
+
+      addSessionToHistory: (entry) =>
+        set((state) => {
+          const date = entry.date || toDateStr(new Date());
+          const nextHistory = [...state.sessionHistory, { date, duration: entry.duration, taskId: entry.taskId, completed: entry.completed }];
+          const nextLogs = [...state.focusLogs, { id: crypto.randomUUID(), date, durationMinutes: entry.duration, taskId: entry.taskId }];
+          const xpGain = Math.round(entry.duration / 25 * 100);
+          const nextXP = state.xp + xpGain;
+          const nextLevel = Math.floor(nextXP / 1000) + 1;
+          return {
+            sessionHistory: nextHistory,
+            focusLogs: nextLogs,
+            weeklyStats: calculateWeeklyStats(state.tasks, nextLogs),
+            xp: nextXP,
+            level: nextLevel,
+            streak: state.streak + 1,
+          };
+        }),
+
+      updateWeeklyStats: () =>
+        set((state) => ({
+          weeklyStats: calculateWeeklyStats(state.tasks, state.focusLogs),
+        })),
+
+      setLockdown: (enabled) => set({ lockdown: enabled }),
+
+      setExamDate: (date) => set({ examDate: date }),
+
+      grantXP: (amount) =>
+        set((state) => {
+          const nextXP = state.xp + amount;
+          const nextLevel = Math.floor(nextXP / 1000) + 1;
+          const earned = nextLevel > state.level;
+          return {
+            xp: nextXP,
+            level: nextLevel,
+            streak: earned ? state.streak + 1 : state.streak,
+            weeklyStats: { ...state.weeklyStats },
+          };
+        }),
+
+      updateTaskStability: (id, stability) =>
+        set((state) => ({
+          tasks: state.tasks.map((t) => (t.id === id ? { ...t, stability } : t)),
         })),
 
       updateSettings: (s) =>

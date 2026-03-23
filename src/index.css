@@ -53,7 +53,20 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    --background: 227 9% 8%;
+    --foreground: 0 0% 97%;
+    --card: 229 12% 14%;
+    --card-foreground: 0 0% 95%;
+    --popover: 229 12% 16%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 208 88% 63%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 16% 25%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 210 20% 18%;
+    --muted-foreground: 210 14% 54%;
+    --border: 230 30% 20%;
+    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))] antialiased;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -62,11 +75,12 @@
 
 @layer utilities {
   .glass-card {
-    @apply bg-white/80 backdrop-blur-xl rounded-2xl border border-border/50;
+    @apply bg-white/10 backdrop-blur-2xl rounded-[2rem] border border-white/10;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
   }
 
   .glass-card-solid {
-    @apply bg-card rounded-2xl border border-border/50;
+    @apply bg-card/80 rounded-[2rem] border border-white/10;
   }
 
   .text-headline {

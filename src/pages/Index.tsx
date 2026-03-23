@@ -6,6 +6,9 @@ import FocusScreen from '@/components/echos/FocusScreen';
 import EducationScreen from '@/components/echos/EducationScreen';
 import CalendarScreen from '@/components/echos/CalendarScreen';
 import AnalyticsScreen from '@/components/echos/AnalyticsScreen';
+import ExamHub from '@/components/echos/ExamHub';
+import Flashcards from '@/components/echos/Flashcards';
+import FeynmanMode from '@/components/echos/FeynmanMode';
 import BottomNav from '@/components/echos/BottomNav';
 import { echosTransition } from '@/lib/motion';
 
@@ -14,6 +17,9 @@ const screens: Record<string, React.FC> = {
   calendar: CalendarScreen,
   focus: FocusScreen,
   education: EducationScreen,
+  exam: ExamHub,
+  flashcards: Flashcards,
+  feynman: FeynmanMode,
   analytics: AnalyticsScreen,
 };
 

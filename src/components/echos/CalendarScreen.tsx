@@ -74,7 +74,7 @@ const CalendarScreen = () => {
   }, [tasks, today]);
 
   return (
-    <div className="mx-auto max-w-lg px-5 pb-28 pt-14">
+    <div className="mx-auto max-w-2xl px-5 pb-28 pt-14">
       <motion.div {...fadeInUp} className="mb-6">
         <p className="text-subhead uppercase tracking-widest">Schedule</p>
         <h1 className="text-headline mt-1">Calendar</h1>
