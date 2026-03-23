@@ -8,10 +8,11 @@ const QuickAdd = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const addTask = useStore((s) => s.addTask);
+  const selectedDate = useStore((s) => s.selectedDate);
 
   const handleSubmit = () => {
     if (!title.trim()) return;
-    addTask({ title: title.trim(), time: null, category: 'personal', subcategory: 'Quick' });
+    addTask({ title: title.trim(), time: null, date: selectedDate, category: 'personal', subcategory: 'Quick' });
     setTitle('');
     setIsOpen(false);
   };
