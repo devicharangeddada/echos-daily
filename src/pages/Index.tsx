@@ -1,16 +1,29 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import TodayScreen from '@/components/echos/TodayScreen';
+import BottomNav from '@/components/echos/BottomNav';
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const PlaceholderTab = ({ name }: { name: string }) => (
+  <div className="flex min-h-screen items-center justify-center pb-24">
+    <div className="text-center">
+      <h2 className="text-headline">{name}</h2>
+      <p className="text-subhead mt-2">Coming soon</p>
+    </div>
+  </div>
+);
+
+const Index = () => {
+  const [activeTab, setActiveTab] = useState('today');
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background">
+      {activeTab === 'today' && <TodayScreen />}
+      {activeTab === 'tasks' && <PlaceholderTab name="Tasks" />}
+      {activeTab === 'focus' && <PlaceholderTab name="Focus" />}
+      {activeTab === 'education' && <PlaceholderTab name="Education" />}
+      {activeTab === 'analytics' && <PlaceholderTab name="Analytics" />}
+      <BottomNav active={activeTab} onChange={setActiveTab} />
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
