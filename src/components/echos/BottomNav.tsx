@@ -4,7 +4,7 @@ import { echosTransition } from '@/lib/motion';
 
 const tabs = [
   { id: 'today', label: 'Today', icon: CalendarDays },
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { id: 'calendar', label: 'Calendar', icon: CheckSquare },
   { id: 'focus', label: 'Focus', icon: Target },
   { id: 'education', label: 'Learn', icon: GraduationCap },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -13,11 +13,14 @@ const tabs = [
 interface BottomNavProps {
   active: string;
   onChange: (tab: string) => void;
+  hidden?: boolean;
 }
 
-const BottomNav = ({ active, onChange }: BottomNavProps) => {
+const BottomNav = ({ active, onChange, hidden }: BottomNavProps) => {
+  if (hidden) return null;
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 z-40">
       <div className="mx-auto max-w-lg px-4 pb-2">
         <div className="glass-card flex items-center justify-around px-2 py-2 shadow-lg shadow-primary/5">
           {tabs.map((tab) => {

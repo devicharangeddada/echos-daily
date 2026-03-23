@@ -1,27 +1,40 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useStore } from '@/store/useStore';
 import TodayScreen from '@/components/echos/TodayScreen';
+import FocusScreen from '@/components/echos/FocusScreen';
+import EducationScreen from '@/components/echos/EducationScreen';
+import CalendarScreen from '@/components/echos/CalendarScreen';
+import AnalyticsScreen from '@/components/echos/AnalyticsScreen';
 import BottomNav from '@/components/echos/BottomNav';
+import { echosTransition } from '@/lib/motion';
 
-const PlaceholderTab = ({ name }: { name: string }) => (
-  <div className="flex min-h-screen items-center justify-center pb-24">
-    <div className="text-center">
-      <h2 className="text-headline">{name}</h2>
-      <p className="text-subhead mt-2">Coming soon</p>
-    </div>
-  </div>
-);
+const screens: Record<string, React.FC> = {
+  today: TodayScreen,
+  calendar: CalendarScreen,
+  focus: FocusScreen,
+  education: EducationScreen,
+  analytics: AnalyticsScreen,
+};
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('today');
+  const focusSession = useStore((s) => s.focusSession);
+  const Screen = screens[activeTab];
 
   return (
     <div className="min-h-screen bg-background">
-      {activeTab === 'today' && <TodayScreen />}
-      {activeTab === 'tasks' && <PlaceholderTab name="Tasks" />}
-      {activeTab === 'focus' && <PlaceholderTab name="Focus" />}
-      {activeTab === 'education' && <PlaceholderTab name="Education" />}
-      {activeTab === 'analytics' && <PlaceholderTab name="Analytics" />}
-      <BottomNav active={activeTab} onChange={setActiveTab} />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0, transition: echosTransition }}
+          exit={{ opacity: 0, y: -10, transition: echosTransition }}
+        >
+          <Screen />
+        </motion.div>
+      </AnimatePresence>
+      <BottomNav active={activeTab} onChange={setActiveTab} hidden={focusSession.isActive} />
     </div>
   );
 };

@@ -5,18 +5,14 @@ import { staggerContainer, fadeInUp } from '@/lib/motion';
 import NextUpCard from './NextUpCard';
 import TaskCard from './TaskCard';
 import QuickAdd from './QuickAdd';
+import WeeklyStrip from './WeeklyStrip';
 
 const getTimeGroup = (time: string | null): 'Morning' | 'Afternoon' | 'Evening' | 'Unscheduled' => {
   if (!time) return 'Unscheduled';
   const hour = parseInt(time.split(':')[0], 10);
-  if (hour < 12) return 'Morning';
-  if (hour < 17) return 'Afternoon';
+  if (hour >= 5 && hour < 12) return 'Morning';
+  if (hour >= 12 && hour < 17) return 'Afternoon';
   return 'Evening';
-};
-
-const now = () => {
-  const d = new Date();
-  return d.getHours() * 60 + d.getMinutes();
 };
 
 const timeToMinutes = (t: string) => {
@@ -24,47 +20,61 @@ const timeToMinutes = (t: string) => {
   return h * 60 + m;
 };
 
+const toDateStr = (d: Date) => d.toISOString().split('T')[0];
+
 const TodayScreen = () => {
   const tasks = useStore((s) => s.tasks);
   const toggleTask = useStore((s) => s.toggleTask);
+  const selectedDate = useStore((s) => s.selectedDate);
 
-  const currentMinutes = now();
+  const today = toDateStr(new Date());
+  const isToday = selectedDate === today;
+  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((t) => (t.date || today) === selectedDate);
+  }, [tasks, selectedDate, today]);
 
   const nextUp = useMemo(() => {
-    return tasks
-      .filter((t) => !t.completed && t.time && timeToMinutes(t.time) >= currentMinutes)
+    if (!isToday) return null;
+    return filteredTasks
+      .filter((t) => !t.completed && t.time && timeToMinutes(t.time) >= nowMinutes)
       .sort((a, b) => timeToMinutes(a.time!) - timeToMinutes(b.time!))[0] || null;
-  }, [tasks, currentMinutes]);
+  }, [filteredTasks, nowMinutes, isToday]);
 
   const grouped = useMemo(() => {
-    const groups: Record<string, typeof tasks> = { Morning: [], Afternoon: [], Evening: [], Unscheduled: [] };
-    tasks.forEach((t) => {
-      groups[getTimeGroup(t.time)].push(t);
-    });
-    // Sort timed tasks within each group
+    const groups: Record<string, typeof filteredTasks> = { Morning: [], Afternoon: [], Evening: [], Unscheduled: [] };
+    filteredTasks.forEach((t) => groups[getTimeGroup(t.time)].push(t));
     ['Morning', 'Afternoon', 'Evening'].forEach((g) => {
       groups[g].sort((a, b) => timeToMinutes(a.time!) - timeToMinutes(b.time!));
     });
     return groups;
-  }, [tasks]);
+  }, [filteredTasks]);
 
-  const date = new Date();
-  const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const displayDate = new Date(selectedDate + 'T12:00:00');
+  const dateStr = displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   const groupOrder = ['Morning', 'Afternoon', 'Evening', 'Unscheduled'];
 
   return (
     <div className="mx-auto max-w-lg px-5 pb-28 pt-14">
       {/* Header */}
-      <motion.div {...fadeInUp} className="mb-8">
+      <motion.div {...fadeInUp} className="mb-6">
         <p className="text-subhead uppercase tracking-widest">{dateStr}</p>
-        <h1 className="text-headline mt-1">Today</h1>
+        <h1 className="text-headline mt-1">{isToday ? 'Today' : displayDate.toLocaleDateString('en-US', { weekday: 'long' })}</h1>
+      </motion.div>
+
+      {/* Weekly Strip */}
+      <motion.div {...fadeInUp} className="mb-6">
+        <WeeklyStrip />
       </motion.div>
 
       {/* Next Up */}
-      <div className="mb-6">
-        <NextUpCard task={nextUp} />
-      </div>
+      {nextUp && (
+        <div className="mb-6">
+          <NextUpCard task={nextUp} />
+        </div>
+      )}
 
       {/* Task Groups */}
       <motion.div {...staggerContainer} className="space-y-8">
@@ -81,7 +91,7 @@ const TodayScreen = () => {
                       key={task.id}
                       task={task}
                       onToggle={toggleTask}
-                      isMissed={!!task.time && timeToMinutes(task.time) < currentMinutes}
+                      isMissed={isToday && !!task.time && timeToMinutes(task.time) < nowMinutes}
                     />
                   ))}
                 </AnimatePresence>
@@ -90,6 +100,12 @@ const TodayScreen = () => {
           );
         })}
       </motion.div>
+
+      {filteredTasks.length === 0 && (
+        <motion.div {...fadeInUp} className="glass-card p-8 text-center">
+          <p className="text-muted-foreground text-sm">No tasks scheduled</p>
+        </motion.div>
+      )}
 
       {/* Quick Add */}
       <div className="mt-6">
