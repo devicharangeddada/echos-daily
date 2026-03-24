@@ -10,10 +10,10 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+    <BrowserRouter>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
         <main className="max-w-5xl mx-auto w-full px-4 md:px-8 pb-24 md:pb-12 pt-6">
           <Routes>
             <Route path="/" element={<Index />} />
@@ -21,8 +21,8 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
-      </BrowserRouter>
-    </TooltipProvider>
+      </TooltipProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
