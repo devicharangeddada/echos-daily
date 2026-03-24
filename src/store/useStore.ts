@@ -61,9 +61,36 @@ export interface WeeklyStats {
   consistencyScore: number;
 }
 
+export interface ReminderSettings {
+  taskReminders: boolean;
+  focusReminders: boolean;
+  revisionReminders: boolean;
+  reminderMinutesBefore: number;
+}
+
+export interface SoundSettings {
+  enabled: boolean;
+  volume: number; // 0-100
+  taskComplete: boolean;
+  focusStart: boolean;
+  focusEnd: boolean;
+  levelUp: boolean;
+  streakMilestone: boolean;
+  uiClick: boolean;
+}
+
 export interface Settings {
   timeFormat: '24h' | '12h';
   sounds: boolean;
+  theme: 'dark' | 'light' | 'system';
+  soundSettings: SoundSettings;
+  reminders: ReminderSettings;
+  pomodoroWork: number; // minutes
+  pomodoroBreak: number; // minutes
+  autoStartBreak: boolean;
+  showXPAnimations: boolean;
+  hapticFeedback: boolean;
+  compactMode: boolean;
 }
 
 interface StoreState {
