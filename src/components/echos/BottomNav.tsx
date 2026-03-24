@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CalendarDays, Target, GraduationCap, BarChart3, BookOpen, TreePine } from 'lucide-react';
+import { CalendarDays, Target, GraduationCap, BarChart3, BookOpen, TreePine, Settings } from 'lucide-react';
 import { echosTransition } from '@/lib/motion';
 
 const tabs = [
@@ -8,7 +8,8 @@ const tabs = [
   { id: 'focus', label: 'Focus', icon: Target },
   { id: 'exam', label: 'Exam', icon: BookOpen },
   { id: 'education', label: 'Learn', icon: GraduationCap },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+  { id: 'analytics', label: 'Stats', icon: BarChart3 },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ] as const;
 
 interface BottomNavProps {
