@@ -281,9 +281,6 @@ const EducationScreen = () => {
 };
 
 export default EducationScreen;
-            {/* Resource links */}
-            {task.resourceLinks && task.resourceLinks.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
                 {task.resourceLinks.map((link, i) => (
                   <a
                     key={i}
