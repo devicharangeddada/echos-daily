@@ -51,6 +51,11 @@ const TodayScreen = () => {
     return groups;
   }, [filteredTasks]);
 
+  const displayDate = new Date(selectedDate + 'T12:00:00');
+  const dateStr = displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const groupOrder = ['Morning', 'Afternoon', 'Evening', 'Unscheduled'];
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
