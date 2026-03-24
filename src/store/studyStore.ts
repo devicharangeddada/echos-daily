@@ -81,6 +81,9 @@ interface StudyState {
   removeChapter: (subjectId: string, chapterId: string) => void;
   addTopic: (subjectId: string, chapterId: string, name: string) => void;
   removeTopic: (subjectId: string, chapterId: string, topicId: string) => void;
+  renameSubject: (subjectId: string, name: string) => void;
+  renameChapter: (subjectId: string, chapterId: string, name: string) => void;
+  reorderTopics: (subjectId: string, chapterId: string, fromIndex: number, toIndex: number) => void;
   updateTopic: (subjectId: string, chapterId: string, topicId: string, updates: Partial<Topic>) => void;
   addFlashcard: (subjectId: string, chapterId: string, topicId: string, q: string, a: string) => void;
   reviewFlashcard: (subjectId: string, chapterId: string, topicId: string, cardId: string, quality: number) => void;
@@ -95,6 +98,11 @@ interface StudyState {
   getStudyTodayTopics: () => { subject: Subject; chapter: Chapter; topic: Topic }[];
   getOverallProgress: () => number;
   quickAdd: (subjectName: string, chapterName: string, topicName: string, color?: string) => void;
+  examSections: { id: string; title: string; notes: string }[];
+  addExamSection: (title: string) => void;
+  updateExamSection: (id: string, updates: Partial<{ title: string; notes: string }>) => void;
+  removeExamSection: (id: string) => void;
+  reorderExamSections: (fromIndex: number, toIndex: number) => void;
 }
 
 const uid = () => crypto.randomUUID();
@@ -223,6 +231,40 @@ export const useStudyStore = create<StudyState>()(
               chapters: sub.chapters.map((c) =>
                 c.id !== chapterId ? c : { ...c, topics: c.topics.filter((t) => t.id !== topicId) }
               ),
+            }
+          ),
+        })),
+
+      renameSubject: (subjectId, name) =>
+        set((s) => ({
+          subjects: s.subjects.map((sub) =>
+            sub.id !== subjectId ? sub : { ...sub, name }
+          ),
+        })),
+
+      renameChapter: (subjectId, chapterId, name) =>
+        set((s) => ({
+          subjects: s.subjects.map((sub) =>
+            sub.id !== subjectId ? sub : {
+              ...sub,
+              chapters: sub.chapters.map((c) => c.id !== chapterId ? c : { ...c, name }),
+            }
+          ),
+        })),
+
+      reorderTopics: (subjectId, chapterId, fromIndex, toIndex) =>
+        set((s) => ({
+          subjects: s.subjects.map((sub) =>
+            sub.id !== subjectId ? sub : {
+              ...sub,
+              chapters: sub.chapters.map((c) => {
+                if (c.id !== chapterId) return c;
+                const topics = [...c.topics];
+                const [moved] = topics.splice(fromIndex, 1);
+                if (!moved) return c;
+                topics.splice(Math.max(0, Math.min(toIndex, topics.length)), 0, moved);
+                return { ...c, topics };
+              }),
             }
           ),
         })),
@@ -422,6 +464,33 @@ export const useStudyStore = create<StudyState>()(
           return { subjects };
         });
       },
+
+      examSections: [],
+      addExamSection: (title) =>
+        set((s) => ({
+          examSections: [...s.examSections, { id: uid(), title, notes: '' }],
+        })),
+
+      updateExamSection: (id, updates) =>
+        set((s) => ({
+          examSections: s.examSections.map((section) =>
+            section.id !== id ? section : { ...section, ...updates }
+          ),
+        })),
+
+      removeExamSection: (id) =>
+        set((s) => ({
+          examSections: s.examSections.filter((section) => section.id !== id),
+        })),
+
+      reorderExamSections: (fromIndex, toIndex) =>
+        set((s) => {
+          const sections = [...s.examSections];
+          const [moved] = sections.splice(fromIndex, 1);
+          if (!moved) return { examSections: sections };
+          sections.splice(Math.max(0, Math.min(toIndex, sections.length)), 0, moved);
+          return { examSections: sections };
+        }),
     }),
     { name: 'echos-study-storage' }
   )

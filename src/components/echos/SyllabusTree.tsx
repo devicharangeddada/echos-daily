@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Plus, X, BookOpen, Brain, FileText, Timer, Check } from 'lucide-react';
+import EditableTitle from '@/components/ui/editable-title';
 import { useStudyStore, Topic, Subject, Chapter } from '@/store/studyStore';
 import { fadeInUp, hoverLift, echosTransition } from '@/lib/motion';
 
@@ -299,13 +300,14 @@ const TopicWorkspace = ({
 };
 
 const SyllabusTree = () => {
-  const { subjects, addSubject, addChapter, addTopic, quickAdd } = useStudyStore();
+  const { subjects, addSubject, addChapter, addTopic, quickAdd, renameSubject, renameChapter, removeSubject, removeChapter, reorderTopics } = useStudyStore();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [activeTopic, setActiveTopic] = useState<{ subject: Subject; chapter: Chapter; topic: Topic } | null>(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [qaSubject, setQaSubject] = useState('');
   const [qaChapter, setQaChapter] = useState('');
   const [qaTopic, setQaTopic] = useState('');
+  const [dragSource, setDragSource] = useState<{ subjectId: string; chapterId: string; index: number } | null>(null);
 
   const toggle = (id: string) => setExpanded((e) => ({ ...e, [id]: !e[id] }));
 
@@ -354,7 +356,13 @@ const SyllabusTree = () => {
                 whileTap={{ scale: 0.98 }}
               >
                 <div className="h-3 w-3 rounded-full" style={{ background: `hsl(${subject.color})` }} />
-                <span className="flex-1 text-left text-[15px] font-medium text-foreground">{subject.name}</span>
+                <div className="flex-1 text-left text-[15px] font-medium">
+                  <EditableTitle
+                    value={subject.name}
+                    onSave={(name) => renameSubject(subject.id, name)}
+                    className="text-foreground"
+                  />
+                </div>
                 <span className="text-xs text-muted-foreground mr-2">
                   {subject.chapters.reduce((s, c) => s + c.topics.length, 0)} topics
                 </span>
@@ -381,7 +389,13 @@ const SyllabusTree = () => {
                           <motion.div animate={{ rotate: expanded[chapter.id] ? 90 : 0 }} transition={echosTransition}>
                             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                           </motion.div>
-                          <span className="flex-1 text-left text-sm text-foreground">{chapter.name}</span>
+                          <div className="flex-1 text-left text-sm text-foreground">
+                            <EditableTitle
+                              value={chapter.name}
+                              onSave={(name) => renameChapter(subject.id, chapter.id, name)}
+                              className="text-foreground"
+                            />
+                          </div>
                           <span className="text-[10px] text-muted-foreground">{chapter.topics.length}</span>
                         </motion.button>
 
@@ -393,12 +407,21 @@ const SyllabusTree = () => {
                               exit={{ height: 0, opacity: 0, transition: echosTransition }}
                               className="overflow-hidden"
                             >
-                              {chapter.topics.map((topic) => (
+                              {chapter.topics.map((topic, tIdx) => (
                                 <motion.button
                                   key={topic.id}
                                   {...hoverLift}
+                                  draggable
+                                  onDragStart={() => setDragSource({ subjectId: subject.id, chapterId: chapter.id, index: tIdx })}
+                                  onDragOver={(e) => e.preventDefault()}
+                                  onDrop={() => {
+                                    if (dragSource && dragSource.subjectId === subject.id && dragSource.chapterId === chapter.id) {
+                                      reorderTopics(subject.id, chapter.id, dragSource.index, tIdx);
+                                    }
+                                    setDragSource(null);
+                                  }}
                                   onClick={() => setActiveTopic({ subject, chapter, topic })}
-                                  className="flex w-full items-center gap-3 px-5 py-2.5 pl-16 hover:bg-secondary/50 transition-colors"
+                                  className="flex w-full items-center gap-3 px-5 py-2.5 pl-16 hover:bg-secondary/50 transition-colors cursor-move"
                                 >
                                   <div className={`h-2 w-2 rounded-full ${statusColors[topic.status]}`} />
                                   <span className="flex-1 text-left text-sm text-foreground">{topic.name}</span>

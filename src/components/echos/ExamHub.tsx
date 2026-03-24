@@ -1,17 +1,28 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Target, BookOpen, TrendingUp } from 'lucide-react';
+import EditableTitle from '@/components/ui/editable-title';
 import { useStudyStore } from '@/store/studyStore';
 import { useStore } from '@/store/useStore';
 import { fadeInUp, hoverLift, echosTransition } from '@/lib/motion';
 
 const ExamHub = () => {
-  const { getStudyTodayTopics, getOverallProgress, subjects } = useStudyStore();
+  const {
+    getStudyTodayTopics,
+    getOverallProgress,
+    subjects,
+    examSections,
+    addExamSection,
+    updateExamSection,
+    removeExamSection,
+    reorderExamSections,
+  } = useStudyStore();
   const { examDate, xp, level, streak } = useStore();
 
   const studyToday = useMemo(() => getStudyTodayTopics(), [subjects]);
   const progress = useMemo(() => getOverallProgress(), [subjects]);
   const nextTopic = studyToday[0] || null;
+  const [newSection, setNewSection] = useState('');
 
   const daysLeft = useMemo(() => {
     const delta = Math.max(0, new Date(examDate).getTime() - Date.now());
@@ -122,6 +133,71 @@ const ExamHub = () => {
           </div>
         </motion.div>
       )}
+
+      {/* Custom Exam Sections */}
+      <motion.div {...fadeInUp} className="glass-card p-5 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-caption uppercase tracking-widest">Custom Exam Sections</p>
+          <div className="flex items-center gap-2">
+            <input
+              value={newSection}
+              onChange={(e) => setNewSection(e.target.value)}
+              placeholder="New section name"
+              className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground outline-none"
+            />
+            <button
+              onClick={() => {
+                if (newSection.trim()) {
+                  addExamSection(newSection.trim());
+                  setNewSection('');
+                }
+              }}
+              className="rounded-full bg-accent px-3 py-1 text-xs text-primary-foreground"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        {examSections.length === 0 && (
+          <div className="text-sm text-muted-foreground">No custom sections yet. Add one to organize your exam strategy.</div>
+        )}
+
+        <div className="space-y-2">
+          {examSections.map((section, idx) => (
+            <div key={section.id} className="rounded-xl border border-border p-3 bg-background/50">
+              <div className="flex items-center gap-2">
+                <EditableTitle
+                  value={section.title}
+                  onSave={(newTitle) => updateExamSection(section.id, { title: newTitle })}
+                  className="text-sm font-semibold text-foreground"
+                />
+                <button
+                  onClick={() => reorderExamSections(idx, idx - 1)}
+                  className="text-xs rounded-full bg-secondary px-2 py-1"
+                  disabled={idx === 0}
+                >▲</button>
+                <button
+                  onClick={() => reorderExamSections(idx, idx + 1)}
+                  className="text-xs rounded-full bg-secondary px-2 py-1"
+                  disabled={idx === examSections.length - 1}
+                >▼</button>
+                <button
+                  onClick={() => removeExamSection(section.id)}
+                  className="text-xs rounded-full bg-destructive/20 px-2 py-1 text-destructive"
+                >Remove</button>
+              </div>
+              <textarea
+                value={section.notes}
+                onChange={(e) => updateExamSection(section.id, { notes: e.target.value })}
+                placeholder="Add notes for this section..."
+                className="mt-2 w-full rounded-md border border-border bg-background p-2 text-sm text-foreground outline-none"
+                rows={3}
+              />
+            </div>
+          ))}
+        </div>
+      </motion.div>
 
       {/* XP card */}
       <motion.div {...fadeInUp} className="glass-card p-5">

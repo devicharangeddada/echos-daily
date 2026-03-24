@@ -111,14 +111,14 @@ const Flashcards = () => {
             value={noteInput}
             onChange={(e) => setNoteInput(e.target.value)}
             rows={3}
-            className="w-full rounded-[1rem] bg-white/10 p-3 text-sm text-white outline-none"
+            className="w-full rounded-[1rem] bg-background/10 p-3 text-sm text-foreground outline-none"
             placeholder="Paste notes here..."
           />
           <div className="mt-2 flex gap-2">
             <button onClick={generateFromNote} className="rounded-full bg-accent px-4 py-2 text-xs" disabled={loading}>
               {loading ? 'Generating...' : 'Generate from Note'}
             </button>
-            <button onClick={() => loadCards()} className="rounded-full bg-white/10 px-4 py-2 text-xs">Refresh</button>
+            <button onClick={() => loadCards()} className="rounded-full bg-background/10 px-4 py-2 text-xs">Refresh</button>
           </div>
         </div>
 
@@ -146,7 +146,7 @@ const Flashcards = () => {
           )}
           {cards.length === 0 && !interleavedCard && <p className="text-sm text-muted-foreground">No due flashcards.</p>}
           {cards.map((card) => (
-            <motion.div key={card.id} {...hoverLift} className="rounded-[1.5rem] bg-white/10 p-4">
+            <motion.div key={card.id} {...hoverLift} className="rounded-[1.5rem] bg-background/10 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold">{card.front}</p>
                 <span className="text-[10px] text-muted-foreground">Due: {new Date(card.dueDate).toLocaleDateString()}</span>
