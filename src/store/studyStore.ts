@@ -8,6 +8,24 @@ export interface Attachment {
   type: 'pdf' | 'image' | 'link';
 }
 
+export interface VaultMedia {
+  id: string;
+  type: 'image' | 'pdf';
+  data: string; // dataURL/base64 PDF data
+  label: string;
+  createdAt: number;
+}
+
+export interface VaultFlashcard {
+  id: string;
+  q: string;
+  a: string;
+  lastReviewed: number;
+  nextReview: number;
+  mastery: 0 | 1 | 2 | 3 | 4 | 5;
+  sourceMediaId: string;
+}
+
 export interface Flashcard {
   id: string;
   q: string;
@@ -34,6 +52,11 @@ export interface Topic {
   flashcards: Flashcard[];
   pqps: PQP[];
   attachments: Attachment[];
+  vault: {
+    media: VaultMedia[];
+    extractedText: string;
+    flashcards: VaultFlashcard[];
+  };
   completedAt?: number; // timestamp for revision scheduling
 }
 
@@ -64,6 +87,11 @@ interface StudyState {
   addPQP: (subjectId: string, chapterId: string, topicId: string, question: string, solution: string) => void;
   togglePQP: (subjectId: string, chapterId: string, topicId: string, pqpId: string) => void;
   addAttachment: (subjectId: string, chapterId: string, topicId: string, att: Omit<Attachment, 'id'>) => void;
+  addTopicVaultMedia: (subjectId: string, chapterId: string, topicId: string, media: Omit<VaultMedia, 'id' | 'createdAt'>) => void;
+  removeTopicVaultMedia: (subjectId: string, chapterId: string, topicId: string, mediaId: string) => void;
+  setTopicExtractedText: (subjectId: string, chapterId: string, topicId: string, text: string) => void;
+  addTopicVaultFlashcards: (subjectId: string, chapterId: string, topicId: string, flashcards: Omit<VaultFlashcard, 'id' | 'lastReviewed'>[]) => void;
+  reviewTopicVaultFlashcard: (subjectId: string, chapterId: string, topicId: string, cardId: string, isEasy: boolean) => void;
   getStudyTodayTopics: () => { subject: Subject; chapter: Chapter; topic: Topic }[];
   getOverallProgress: () => number;
   quickAdd: (subjectName: string, chapterName: string, topicName: string, color?: string) => void;
@@ -119,12 +147,12 @@ const defaultSubjects: Subject[] = [
               { id: uid(), q: 'What is KVL?', a: 'The sum of voltage drops around any closed loop equals zero', ease: 2.5, nextReview: Date.now(), interval: 1, reps: 0 },
             ],
             pqps: [{ id: uid(), question: 'Find current through R2 in a series-parallel circuit', solution: 'Use KVL + node analysis', status: 'unattempted' }],
-            attachments: [],
-          },
+            attachments: [],            vault: { media: [], extractedText: '', flashcards: [] },          },
           {
             id: uid(), name: 'Thevenin & Norton', status: 'not-started', masteryScore: 0,
             studyPlan: { pom: 'Study equivalence theorems', rom: 'Solve 3 Thevenin problems' },
             flashcards: [], pqps: [], attachments: [],
+            vault: { media: [], extractedText: '', flashcards: [] },
           },
         ],
       },
@@ -136,6 +164,7 @@ const defaultSubjects: Subject[] = [
             id: uid(), name: "Maxwell's Equations", status: 'not-started', masteryScore: 0,
             studyPlan: { pom: 'Derive all 4 equations', rom: 'Explain in Feynman style' },
             flashcards: [], pqps: [], attachments: [],
+            vault: { media: [], extractedText: '', flashcards: [] },
           },
         ],
       },
@@ -253,6 +282,73 @@ export const useStudyStore = create<StudyState>()(
           })),
         })),
 
+      addTopicVaultMedia: (sId, cId, tId, media) =>
+        set((s) => ({
+          subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
+            ...t,
+            vault: {
+              ...t.vault,
+              media: [...(t.vault?.media ?? []), { ...media, id: uid(), createdAt: Date.now() }],
+            },
+          })),
+        })),
+
+      removeTopicVaultMedia: (sId, cId, tId, mediaId) =>
+        set((s) => ({
+          subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
+            ...t,
+            vault: {
+              ...t.vault,
+              media: (t.vault?.media ?? []).filter((m) => m.id !== mediaId),
+            },
+          })),
+        })),
+
+      setTopicExtractedText: (sId, cId, tId, text) =>
+        set((s) => ({
+          subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
+            ...t,
+            vault: {
+              ...t.vault,
+              extractedText: text,
+            },
+          })),
+        })),
+
+      addTopicVaultFlashcards: (sId, cId, tId, cards) =>
+        set((s) => ({
+          subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
+            ...t,
+            vault: {
+              ...t.vault,
+              flashcards: [
+                ...((t.vault?.flashcards) ?? []),
+                ...cards.map((c) => ({ ...c, id: uid(), lastReviewed: Date.now(), nextReview: Date.now(), mastery: 0 })),
+              ],
+            },
+          })),
+        })),
+
+      reviewTopicVaultFlashcard: (sId, cId, tId, cardId, isEasy) =>
+        set((s) => ({
+          subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
+            ...t,
+            vault: {
+              ...t.vault,
+              flashcards: (t.vault?.flashcards ?? []).map((card) =>
+                card.id !== cardId
+                  ? card
+                  : {
+                      ...card,
+                      mastery: Math.min(5, Math.max(0, card.mastery + (isEasy ? 1 : 0))),
+                      lastReviewed: Date.now(),
+                      nextReview: Date.now() + (isEasy ? 3 * 86400000 : 10 * 60000),
+                    }
+              ),
+            },
+          })),
+        })),
+
       getStudyTodayTopics: () => {
         const { subjects } = get();
         const results: { subject: Subject; chapter: Chapter; topic: Topic }[] = [];
@@ -315,6 +411,7 @@ export const useStudyStore = create<StudyState>()(
           const newTopic: Topic = {
             id: uid(), name: topicName, status: 'not-started', masteryScore: 0,
             studyPlan: { pom: '', rom: '' }, flashcards: [], pqps: [], attachments: [],
+            vault: { media: [], extractedText: '', flashcards: [] },
           };
           subjects[sIdx] = {
             ...subjects[sIdx],
