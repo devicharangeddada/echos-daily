@@ -8,9 +8,56 @@ import { useStore, Settings, SoundSettings, ReminderSettings } from '@/store/use
 import { fadeInUp, hoverLift, echosTransition } from '@/lib/motion';
 import { playSound, previewAllSounds } from '@/lib/sounds';
 
+const defaultSettings: Settings = {
+  timeFormat: '24h',
+  focusDuration: 25,
+  sounds: false,
+  theme: 'dark',
+  soundSettings: {
+    enabled: false,
+    volume: 0.5,
+    taskComplete: false,
+    focusStart: false,
+    focusEnd: false,
+    levelUp: false,
+    streakMilestone: false,
+    uiClick: false,
+  },
+  reminders: {
+    taskReminders: false,
+    focusReminders: false,
+    revisionReminders: false,
+    reminderMinutesBefore: 15,
+  },
+  pomodoroWork: 25,
+  pomodoroBreak: 5,
+  autoStartBreak: false,
+  showXPAnimations: true,
+  hapticFeedback: true,
+  compactMode: false,
+};
+
 const SettingsScreen = () => {
-  const { settings, updateSettings } = useStore();
+  const hasHydrated = useStore.persist.hasHydrated();
+  const { settings: rawSettings, updateSettings } = useStore();
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  if (!hasHydrated) {
+    return <div className="mx-auto max-w-2xl px-5 pb-28 pt-14 text-center text-sm text-muted-foreground">Loading settings...</div>;
+  }
+
+  const settings: Settings = {
+    ...defaultSettings,
+    ...rawSettings,
+    soundSettings: {
+      ...defaultSettings.soundSettings,
+      ...rawSettings?.soundSettings,
+    },
+    reminders: {
+      ...defaultSettings.reminders,
+      ...rawSettings?.reminders,
+    },
+  };
 
   const toggleSection = (id: string) => setExpandedSection(expandedSection === id ? null : id);
 
@@ -155,40 +202,40 @@ const SettingsScreen = () => {
 
           <Toggle
             label="Compact Mode"
-            value={settings.compactMode}
+            value={settings?.compactMode ?? defaultSettings.compactMode}
             onChange={(v) => updateSettings({ compactMode: v })}
             description="Reduce whitespace for denser layouts"
           />
           <Toggle
             label="XP Animations"
-            value={settings.showXPAnimations}
+            value={settings?.showXPAnimations ?? defaultSettings.showXPAnimations}
             onChange={(v) => updateSettings({ showXPAnimations: v })}
             description="Show particle effects on achievements"
           />
           <Toggle
             label="Haptic Feedback"
-            value={settings.hapticFeedback}
+            value={settings?.hapticFeedback ?? defaultSettings.hapticFeedback}
             onChange={(v) => updateSettings({ hapticFeedback: v })}
             description="Vibration on interactions (mobile)"
           />
         </Section>
 
         {/* ─── SOUNDS ─── */}
-        <Section id="sounds" icon={settings.soundSettings.enabled ? Volume2 : VolumeX} title="Sounds & Dopamine" subtitle="Reward sounds, volume, triggers">
+        <Section id="sounds" icon={settings?.soundSettings?.enabled ? Volume2 : VolumeX} title="Sounds & Dopamine" subtitle="Reward sounds, volume, triggers">
           <Toggle
             label="Enable Sounds"
-            value={settings.soundSettings.enabled}
+            value={settings?.soundSettings?.enabled ?? false}
             onChange={(v) => {
               updateSoundSetting('enabled', v);
               updateSettings({ sounds: v });
             }}
           />
 
-          {settings.soundSettings.enabled && (
+          {settings?.soundSettings?.enabled && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
               <Slider
                 label="Volume"
-                value={settings.soundSettings.volume}
+                value={settings?.soundSettings?.volume ?? 0.5}
                 onChange={(v) => updateSoundSetting('volume', v)}
                 min={0} max={100} unit="%"
               />
@@ -199,7 +246,7 @@ const SettingsScreen = () => {
                   <div className="flex items-center justify-between">
                     <Toggle
                       label="Task Complete"
-                      value={settings.soundSettings.taskComplete}
+                        value={settings?.soundSettings?.taskComplete ?? false}
                       onChange={(v) => updateSoundSetting('taskComplete', v)}
                       description="Satisfying ding when you finish a task"
                     />
@@ -208,7 +255,7 @@ const SettingsScreen = () => {
                     <div className="flex-1">
                       <Toggle
                         label="Focus Start"
-                        value={settings.soundSettings.focusStart}
+                        value={settings?.soundSettings?.focusStart ?? false}
                         onChange={(v) => updateSoundSetting('focusStart', v)}
                         description="Calming tone when session begins"
                       />
@@ -216,25 +263,25 @@ const SettingsScreen = () => {
                   </div>
                   <Toggle
                     label="Focus End"
-                    value={settings.soundSettings.focusEnd}
+                    value={settings?.soundSettings?.focusEnd ?? false}
                     onChange={(v) => updateSoundSetting('focusEnd', v)}
                     description="Triumphant arpeggio on completion"
                   />
                   <Toggle
                     label="Level Up"
-                    value={settings.soundSettings.levelUp}
+                    value={settings?.soundSettings?.levelUp ?? false}
                     onChange={(v) => updateSoundSetting('levelUp', v)}
                     description="Epic power chord on level gains"
                   />
                   <Toggle
                     label="Streak Milestone"
-                    value={settings.soundSettings.streakMilestone}
+                    value={settings?.soundSettings?.streakMilestone ?? false}
                     onChange={(v) => updateSoundSetting('streakMilestone', v)}
                     description="Warm pulse on streak achievements"
                   />
                   <Toggle
                     label="UI Clicks"
-                    value={settings.soundSettings.uiClick}
+                    value={settings?.soundSettings?.uiClick ?? false}
                     onChange={(v) => updateSoundSetting('uiClick', v)}
                     description="Subtle tap on button presses"
                   />
@@ -256,7 +303,7 @@ const SettingsScreen = () => {
                     <motion.button
                       key={s.type}
                       {...hoverLift}
-                      onClick={() => playSound(s.type, settings.soundSettings.volume)}
+                      onClick={() => playSound(s.type, settings?.soundSettings?.volume ?? 0.5)}
                       className="rounded-xl bg-secondary py-3 text-xs font-medium text-foreground hover:bg-accent/20 transition-colors"
                     >
                       {s.label}
@@ -265,7 +312,7 @@ const SettingsScreen = () => {
                 </div>
                 <motion.button
                   {...hoverLift}
-                  onClick={() => previewAllSounds(settings.soundSettings.volume)}
+                  onClick={() => previewAllSounds(settings?.soundSettings?.volume ?? 0.5)}
                   className="w-full mt-2 flex items-center justify-center gap-2 rounded-xl bg-accent/15 py-3 text-xs font-semibold text-accent"
                 >
                   <Play className="h-3.5 w-3.5" />
@@ -277,28 +324,28 @@ const SettingsScreen = () => {
         </Section>
 
         {/* ─── REMINDERS ─── */}
-        <Section id="reminders" icon={settings.reminders.taskReminders ? Bell : BellOff} title="Reminders" subtitle="Task, focus, and revision alerts">
+        <Section id="reminders" icon={settings?.reminders?.taskReminders ? Bell : BellOff} title="Reminders" subtitle="Task, focus, and revision alerts">
           <Toggle
             label="Task Reminders"
-            value={settings.reminders.taskReminders}
+            value={settings?.reminders?.taskReminders ?? defaultSettings.reminders.taskReminders}
             onChange={(v) => updateReminderSetting('taskReminders', v)}
             description="Get notified before scheduled tasks"
           />
           <Toggle
             label="Focus Reminders"
-            value={settings.reminders.focusReminders}
+            value={settings?.reminders?.focusReminders ?? defaultSettings.reminders.focusReminders}
             onChange={(v) => updateReminderSetting('focusReminders', v)}
             description="Daily focus session prompts"
           />
           <Toggle
             label="Revision Reminders"
-            value={settings.reminders.revisionReminders}
+            value={settings?.reminders?.revisionReminders ?? defaultSettings.reminders.revisionReminders}
             onChange={(v) => updateReminderSetting('revisionReminders', v)}
             description="Spaced repetition review alerts"
           />
           <Slider
             label="Remind Before"
-            value={settings.reminders.reminderMinutesBefore}
+            value={settings?.reminders?.reminderMinutesBefore ?? defaultSettings.reminders.reminderMinutesBefore}
             onChange={(v) => updateReminderSetting('reminderMinutesBefore', v)}
             min={5} max={60} step={5} unit=" min"
           />
@@ -308,19 +355,19 @@ const SettingsScreen = () => {
         <Section id="timer" icon={Timer} title="Focus Timer" subtitle="Pomodoro durations and behavior">
           <Slider
             label="Work Duration"
-            value={settings.pomodoroWork}
+            value={settings?.pomodoroWork ?? defaultSettings.pomodoroWork}
             onChange={(v) => updateSettings({ pomodoroWork: v })}
             min={5} max={90} step={5} unit=" min"
           />
           <Slider
             label="Break Duration"
-            value={settings.pomodoroBreak}
+            value={settings?.pomodoroBreak ?? defaultSettings.pomodoroBreak}
             onChange={(v) => updateSettings({ pomodoroBreak: v })}
             min={1} max={30} step={1} unit=" min"
           />
           <Toggle
             label="Auto-Start Break"
-            value={settings.autoStartBreak}
+            value={settings?.autoStartBreak ?? defaultSettings.autoStartBreak}
             onChange={(v) => updateSettings({ autoStartBreak: v })}
             description="Automatically begin break after work session"
           />
@@ -340,7 +387,7 @@ const SettingsScreen = () => {
                   {...hoverLift}
                   onClick={() => updateSettings({ timeFormat: f.id })}
                   className={`flex flex-col items-center gap-1 rounded-2xl py-4 transition-colors ${
-                    settings.timeFormat === f.id
+                    settings?.timeFormat === f.id
                       ? 'bg-foreground text-primary-foreground'
                       : 'bg-secondary text-muted-foreground'
                   }`}
@@ -363,8 +410,7 @@ const SettingsScreen = () => {
             {...hoverLift}
             onClick={() => {
               if (window.confirm('Are you sure? This will erase all your data.')) {
-                localStorage.removeItem('echos-storage');
-                localStorage.removeItem('echos-study-storage');
+                localStorage.clear();
                 window.location.reload();
               }
             }}

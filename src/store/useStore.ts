@@ -85,6 +85,7 @@ export interface Settings {
   theme: 'dark' | 'light' | 'system';
   soundSettings: SoundSettings;
   reminders: ReminderSettings;
+  focusDuration: number; // minutes
   pomodoroWork: number; // minutes
   pomodoroBreak: number; // minutes
   autoStartBreak: boolean;
@@ -207,11 +208,12 @@ export const useStore = create<StoreState>()(
       examDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
       settings: {
         timeFormat: '24h',
+        focusDuration: 25,
         sounds: false,
         theme: 'dark',
         soundSettings: {
           enabled: false,
-          volume: 70,
+          volume: 0.5,
           taskComplete: true,
           focusStart: true,
           focusEnd: true,
