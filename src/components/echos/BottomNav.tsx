@@ -1,15 +1,13 @@
 import { motion } from 'framer-motion';
-import { CalendarDays, CheckSquare, Target, GraduationCap, BarChart3, Bot } from 'lucide-react';
+import { CalendarDays, Target, GraduationCap, BarChart3, BookOpen, TreePine } from 'lucide-react';
 import { echosTransition } from '@/lib/motion';
 
 const tabs = [
   { id: 'today', label: 'Today', icon: CalendarDays },
-  { id: 'calendar', label: 'Calendar', icon: CheckSquare },
+  { id: 'syllabus', label: 'Syllabus', icon: TreePine },
   { id: 'focus', label: 'Focus', icon: Target },
-  { id: 'education', label: 'Learn', icon: GraduationCap },
   { id: 'exam', label: 'Exam', icon: BookOpen },
-  { id: 'flashcards', label: 'Flashcards', icon: Sparkles },
-  { id: 'feynman', label: 'Feynman', icon: Bot },
+  { id: 'education', label: 'Learn', icon: GraduationCap },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
 ] as const;
 

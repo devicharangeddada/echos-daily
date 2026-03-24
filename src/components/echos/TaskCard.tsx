@@ -14,6 +14,7 @@ const categoryColors: Record<Task['category'], string> = {
   personal: 'bg-orange-500/10 text-orange-600',
   health: 'bg-emerald-500/10 text-emerald-600',
   learning: 'bg-violet-500/10 text-violet-600',
+  education: 'bg-violet-500/10 text-violet-600',
 };
 
 const TaskCard = ({ task, onToggle, isMissed }: TaskCardProps) => {
