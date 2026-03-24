@@ -52,7 +52,6 @@ const Flashcards = () => {
       await Promise.all(lines.map((line, i) => addFlashcard({
         front: line.slice(0, 80),
         back: line,
-        tags: ['auto'],
         easiness: 2.5,
         interval: 1,
         reps: 0,
@@ -68,7 +67,6 @@ const Flashcards = () => {
       await Promise.all(lines.map((line) => addFlashcard({
         front: line.slice(0, 80),
         back: line,
-        tags: ['auto'],
         easiness: 2.5,
         interval: 1,
         reps: 0,
@@ -129,8 +127,8 @@ const Flashcards = () => {
                 <Sparkles className="h-4 w-4 text-orange-400" />
                 <span className="text-xs font-semibold text-orange-400">Interleaved Practice</span>
               </div>
-              <p className="text-sm font-semibold">{interleavedCard.front}</p>
-              <p className="mt-2 text-xs">{interleavedCard.back}</p>
+              <p className="text-sm font-semibold">{interleavedCard.front || interleavedCard.question}</p>
+              <p className="mt-2 text-xs">{interleavedCard.back || interleavedCard.answer}</p>
               <div className="mt-3 flex gap-2">
                 {[5, 4, 3, 2, 1].map((q) => (
                   <button
@@ -148,10 +146,10 @@ const Flashcards = () => {
           {cards.map((card) => (
             <motion.div key={card.id} {...hoverLift} className="rounded-[1.5rem] bg-background/10 p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">{card.front}</p>
+                <p className="text-sm font-semibold">{card.front || card.question}</p>
                 <span className="text-[10px] text-muted-foreground">Due: {new Date(card.dueDate).toLocaleDateString()}</span>
               </div>
-              <p className="mt-2 text-xs">{card.back}</p>
+              <p className="mt-2 text-xs">{card.back || card.answer}</p>
               <div className="mt-3 flex gap-2">
                 {[5, 4, 3, 2, 1].map((q) => (
                   <button

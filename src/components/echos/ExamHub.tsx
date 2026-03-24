@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Target, BookOpen, TrendingUp } from 'lucide-react';
 import EditableTitle from '@/components/ui/editable-title';
+import MasteryHeatmap from '@/components/echos/MasteryHeatmap';
 import { useStudyStore } from '@/store/studyStore';
 import { useStore } from '@/store/useStore';
 import { fadeInUp, hoverLift, echosTransition } from '@/lib/motion';
@@ -48,19 +49,9 @@ const ExamHub = () => {
         <h1 className="text-headline mt-1">Study Hub</h1>
       </motion.div>
 
-      {/* Overall progress */}
+      {/* Mastery heatmap (Confidence map) */}
       <motion.div {...fadeInUp} className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-caption uppercase tracking-widest">Syllabus Progress</span>
-          <span className="text-xs text-muted-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{progress}%</span>
-        </div>
-        <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-accent rounded-full"
-            animate={{ width: `${progress}%` }}
-            transition={echosTransition}
-          />
-        </div>
+        <MasteryHeatmap subjects={subjects} />
       </motion.div>
 
       {/* Stats strip */}

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Pencil, PlusSquare, Checkbox, ReloadCcw } from 'lucide-react';
 import { useStudyStore, VaultFlashcard } from '@/store/studyStore';
+import { textToEmbedding, cosineSimilarity } from '@/lib/semantic-utils';
 
 interface RecallGenProps {
   subjectId: string;
@@ -58,6 +59,9 @@ const RecallGen = ({ subjectId, chapterId, topicId }: RecallGenProps) => {
   const addTopicVaultFlashcards = useStudyStore((s) => s.addTopicVaultFlashcards);
   const [drafts, setDrafts] = useState<VaultFlashcard[]>([]);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [brainDump, setBrainDump] = useState('');
+  const [similarity, setSimilarity] = useState<number | null>(null);
+  const [isComparing, setIsComparing] = useState(false);
 
   const extractedText = topic?.vault.extractedText ?? '';
 
@@ -96,8 +100,49 @@ const RecallGen = ({ subjectId, chapterId, topicId }: RecallGenProps) => {
 
   return (
     <div className="space-y-4 rounded-xl border border-border p-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <h3 className="text-base font-semibold">Smart Recall Generator</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <textarea
+            value={brainDump}
+            onChange={(e) => setBrainDump(e.target.value)}
+            placeholder="Describe the concept in your own words..."
+            className="w-full min-h-[72px] rounded-md border border-border bg-background p-2 text-sm text-foreground md:w-80"
+          />
+          <button
+            type="button"
+            onClick={async () => {
+              setIsComparing(true);
+              try {
+                const [topicEmb, dumpEmb] = await Promise.all([
+                  textToEmbedding(extractedText || ' '),
+                  textToEmbedding(brainDump || ' '),
+                ]);
+                const score = cosineSimilarity(topicEmb, dumpEmb);
+                setSimilarity(Math.round(score * 100));
+              } catch (error) {
+                console.error('Semantic similarity failed', error);
+                setSimilarity(null);
+              } finally {
+                setIsComparing(false);
+              }
+            }}
+            disabled={!brainDump.trim() || !extractedText.trim()}
+            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white"
+          >
+            {isComparing ? 'Comparing...' : 'Evaluate Recall'}
+          </button>
+        </div>
+      </div>
+      {similarity !== null && (
+        <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm">
+          <strong>Semantic match:</strong> {similarity}%
+          <span className="ml-2 text-xs text-muted-foreground">
+            {similarity >= 90 ? 'Excellent alignment!' : similarity >= 70 ? 'Good, keep refining.' : 'Distill your understanding more.'}
+          </span>
+        </div>
+      )}
+      <div className="flex items-center justify-end">
         <button
           type="button"
           onClick={regenerate}

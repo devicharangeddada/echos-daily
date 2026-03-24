@@ -122,6 +122,7 @@ interface StoreState {
   setLockdown: (enabled: boolean) => void;
   setExamDate: (date: string) => void;
   grantXP: (amount: number) => void;
+  awardFocusChest: () => void;
   updateTaskStability: (id: string, stability: number) => void;
 }
 
@@ -323,13 +324,30 @@ export const useStore = create<StoreState>()(
 
       grantXP: (amount) =>
         set((state) => {
-          const nextXP = state.xp + amount;
+          const bonus = Math.floor(Math.random() * 71) + 80; // 80-150
+          const totalGain = Math.round(amount * (1 + bonus / 100));
+          const nextXP = state.xp + totalGain;
           const nextLevel = Math.floor(nextXP / 1000) + 1;
           const earned = nextLevel > state.level;
           return {
             xp: nextXP,
             level: nextLevel,
             streak: earned ? state.streak + 1 : state.streak,
+            weeklyStats: { ...state.weeklyStats },
+          };
+        }),
+
+      awardFocusChest: () =>
+        set((state) => {
+          const base = 100;
+          const mega = Math.floor(Math.random() * 71) + 80;
+          const xpGain = base + mega;
+          const nextXP = state.xp + xpGain;
+          const nextLevel = Math.floor(nextXP / 1000) + 1;
+          return {
+            xp: nextXP,
+            level: nextLevel,
+            streak: state.streak + 1,
             weeklyStats: { ...state.weeklyStats },
           };
         }),

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { calculateNextReview, getStabilityScore } from '@/lib/srs-logic';
 
 export interface Attachment {
   id: string;
@@ -20,10 +21,13 @@ export interface VaultFlashcard {
   id: string;
   q: string;
   a: string;
-  lastReviewed: number;
-  nextReview: number;
-  mastery: 0 | 1 | 2 | 3 | 4 | 5;
   sourceMediaId: string;
+  easiness: number;
+  interval: number;
+  reps: number;
+  lastReview: number;
+  dueDate: number;
+  stability: number;
 }
 
 export interface Flashcard {
@@ -34,6 +38,7 @@ export interface Flashcard {
   nextReview: number; // timestamp
   interval: number;
   reps: number;
+  stability: number;
 }
 
 export interface PQP {
@@ -93,7 +98,7 @@ interface StudyState {
   addTopicVaultMedia: (subjectId: string, chapterId: string, topicId: string, media: Omit<VaultMedia, 'id' | 'createdAt'>) => void;
   removeTopicVaultMedia: (subjectId: string, chapterId: string, topicId: string, mediaId: string) => void;
   setTopicExtractedText: (subjectId: string, chapterId: string, topicId: string, text: string) => void;
-  addTopicVaultFlashcards: (subjectId: string, chapterId: string, topicId: string, flashcards: Omit<VaultFlashcard, 'id' | 'lastReviewed'>[]) => void;
+  addTopicVaultFlashcards: (subjectId: string, chapterId: string, topicId: string, flashcards: Array<Omit<VaultFlashcard, 'id' | 'lastReview' | 'dueDate' | 'stability'>>) => void;
   reviewTopicVaultFlashcard: (subjectId: string, chapterId: string, topicId: string, cardId: string, isEasy: boolean) => void;
   getStudyTodayTopics: () => { subject: Subject; chapter: Chapter; topic: Topic }[];
   getOverallProgress: () => number;
@@ -107,23 +112,7 @@ interface StudyState {
 
 const uid = () => crypto.randomUUID();
 
-// SM2 algorithm
-const sm2 = (card: Flashcard, quality: number): Partial<Flashcard> => {
-  let { ease, interval, reps } = card;
-  if (quality >= 3) {
-    if (reps === 0) interval = 1;
-    else if (reps === 1) interval = 6;
-    else interval = Math.round(interval * ease);
-    reps += 1;
-  } else {
-    reps = 0;
-    interval = 1;
-  }
-  ease = Math.max(1.3, ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
-  const nextReview = Date.now() + interval * 86400000;
-  return { ease, interval, reps, nextReview };
-};
-
+// SM2 calculations delegated to srs-logic functions
 const mapTopic = (subjects: Subject[], sId: string, cId: string, tId: string, fn: (t: Topic) => Topic): Subject[] =>
   subjects.map((s) =>
     s.id !== sId ? s : {
@@ -284,7 +273,7 @@ export const useStudyStore = create<StudyState>()(
         set((s) => ({
           subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
             ...t,
-            flashcards: [...t.flashcards, { id: uid(), q, a, ease: 2.5, nextReview: Date.now(), interval: 1, reps: 0 }],
+            flashcards: [...t.flashcards, { id: uid(), q, a, ease: 2.5, nextReview: Date.now(), interval: 1, reps: 0, stability: 0 }],
           })),
         })),
 
@@ -292,9 +281,29 @@ export const useStudyStore = create<StudyState>()(
         set((s) => ({
           subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
             ...t,
-            flashcards: t.flashcards.map((fc) =>
-              fc.id !== cardId ? fc : { ...fc, ...sm2(fc, quality) }
-            ),
+            flashcards: t.flashcards.map((fc) => {
+              if (fc.id !== cardId) return fc;
+              const updated = calculateNextReview({
+                id: fc.id,
+                topicId: t.id,
+                question: fc.q,
+                answer: fc.a,
+                easiness: fc.ease,
+                interval: fc.interval,
+                reps: fc.reps,
+                lastReview: Date.now(),
+                dueDate: Date.now(),
+                stability: fc.stability ?? 0,
+              }, quality);
+              return {
+                ...fc,
+                ease: updated.easiness ?? fc.ease,
+                interval: updated.interval ?? fc.interval,
+                reps: updated.reps ?? fc.reps,
+                nextReview: updated.dueDate ?? fc.nextReview,
+                stability: updated.stability ?? fc.stability,
+              };
+            }),
           })),
         })),
 
@@ -365,7 +374,18 @@ export const useStudyStore = create<StudyState>()(
               ...t.vault,
               flashcards: [
                 ...((t.vault?.flashcards) ?? []),
-                ...cards.map((c) => ({ ...c, id: uid(), lastReviewed: Date.now(), nextReview: Date.now(), mastery: 0 })),
+                ...cards.map((c) => ({
+                  ...c,
+                  id: uid(),
+                  question: c.question ?? c.q ?? c.front ?? '',
+                  answer: c.answer ?? c.a ?? c.back ?? '',
+                  lastReviewed: Date.now(),
+                  dueDate: Date.now(),
+                  easiness: 2.5,
+                  interval: 1,
+                  reps: 0,
+                  stability: 0,
+                })),
               ],
             },
           })),
@@ -377,19 +397,28 @@ export const useStudyStore = create<StudyState>()(
             ...t,
             vault: {
               ...t.vault,
-              flashcards: (t.vault?.flashcards ?? []).map((card) =>
-                card.id !== cardId
-                  ? card
-                  : {
-                      ...card,
-                      mastery: Math.min(5, Math.max(0, card.mastery + (isEasy ? 1 : 0))),
-                      lastReviewed: Date.now(),
-                      nextReview: Date.now() + (isEasy ? 3 * 86400000 : 10 * 60000),
-                    }
-              ),
+              flashcards: (t.vault?.flashcards ?? []).map((card) => {
+                if (card.id !== cardId) return card;
+                const quality = isEasy ? 5 : 3;
+                const updated = calculateNextReview({
+                  ...card,
+                  question: card.question ?? card.q ?? card.front ?? '',
+                  answer: card.answer ?? card.a ?? card.back ?? '',
+                }, quality);
+                return {
+                  ...card,
+                  easiness: updated.easiness ?? card.easiness,
+                  interval: updated.interval ?? card.interval,
+                  reps: updated.reps ?? card.reps,
+                  lastReview: updated.lastReview ?? card.lastReview,
+                  dueDate: updated.dueDate ?? card.dueDate,
+                  stability: updated.stability ?? card.stability,
+                };
+              }),
             },
           })),
         })),
+
 
       getStudyTodayTopics: () => {
         const { subjects } = get();

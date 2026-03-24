@@ -4,6 +4,7 @@ import { Plus, X, FileText, ImageIcon, Eye, Sparkles } from 'lucide-react';
 import { useStudyStore, VaultMedia } from '@/store/studyStore';
 import { compressImageToDataUrl, fileToDataUrl } from '@/lib/media-compressor';
 import { extractTextFromImage } from '@/lib/ocr-worker';
+import { addMaterial } from '@/store/vaultDB';
 
 interface MediaHubProps {
   subjectId: string;
@@ -45,6 +46,19 @@ const MediaHub = ({ subjectId, chapterId, topicId }: MediaHubProps) => {
         data: dataUrl,
         label: file.name,
       });
+
+      // Local-first vault material store in IndexedDB
+      try {
+        await addMaterial({
+          topicId,
+          fileName: file.name,
+          fileType: type,
+          fileBlob: file,
+          ocrText: type === 'image' ? (await extractTextFromImage(dataUrl)) : '',
+        });
+      } catch (dexieError) {
+        console.error('Failed to persist media in indexedDB', dexieError);
+      }
 
       if (type === 'image') {
         const extracted = await extractTextFromImage(dataUrl);
