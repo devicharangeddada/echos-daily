@@ -4,23 +4,23 @@
 
 @layer base {
   :root {
-    --background: 0 0% 96.5%;
-    --foreground: 0 0% 9%;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card-foreground: 240 10% 3.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover-foreground: 240 10% 3.9%;
 
-    --primary: 0 0% 9%;
+    --primary: 214 100% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 93%;
-    --secondary-foreground: 0 0% 20%;
+    --secondary: 210 16% 25%;
+    --secondary-foreground: 240 10% 3.9%;
 
-    --muted: 0 0% 95%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 210 20% 18%;
+    --muted-foreground: 240 10% 3.9%;
 
     --accent: 214 100% 50%;
     --accent-foreground: 0 0% 100%;
@@ -45,16 +45,10 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-}
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    --background: 227 9% 8%;
-    --foreground: 0 0% 97%;
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
     --card: 229 12% 14%;
     --card-foreground: 0 0% 95%;
     --popover: 229 12% 16%;
@@ -66,10 +60,39 @@
     --muted: 210 20% 18%;
     --muted-foreground: 210 14% 54%;
     --border: 230 30% 20%;
-    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))] antialiased;
+    --input: 230 30% 20%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  .light-theme body,
+  body.light-theme,
+  .light-theme {
+    --background: 0 0% 96.5%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 214 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 214 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
   }
 
   .light-theme body,

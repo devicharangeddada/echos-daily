@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
+import { useTheme } from '@/hooks/useTheme';
 import TodayScreen from '@/components/echos/TodayScreen';
 import FocusScreen from '@/components/echos/FocusScreen';
 import EducationScreen from '@/components/echos/EducationScreen';
@@ -26,31 +27,16 @@ const screens: Record<string, React.FC> = {
 const Index = () => {
   const [activeTab, setActiveTab] = useState('today');
   const focusSession = useStore((s) => s.focusSession);
-  const theme = useStore((s) => s.settings.theme);
   const Screen = screens[activeTab];
 
-  // Apply theme on mount and change
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'light') {
-      root.classList.add('light-theme');
-    } else if (theme === 'dark') {
-      root.classList.remove('light-theme');
-    } else {
-      // system
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
-        root.classList.remove('light-theme');
-      } else {
-        root.classList.add('light-theme');
-      }
-    }
-  }, [theme]);
+  useTheme();
+
 
   return (
-    <div className="min-h-screen bg-background">
-      <AnimatePresence mode="wait">
-        <motion.div
+    <div className="min-h-screen bg-background text-foreground">
+      <main className="min-h-screen bg-background text-foreground">
+        <AnimatePresence mode="wait">
+          <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0, transition: echosTransition }}
@@ -58,7 +44,8 @@ const Index = () => {
         >
           <Screen />
         </motion.div>
-      </AnimatePresence>
+        </AnimatePresence>
+      </main>
       <BottomNav active={activeTab} onChange={setActiveTab} hidden={focusSession.isActive} />
     </div>
   );

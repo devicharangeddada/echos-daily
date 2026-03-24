@@ -95,13 +95,13 @@ const FeynmanMode = () => {
             >
               <div className={`flex gap-3 max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                  msg.role === 'ai' ? 'bg-accent text-black' : 'bg-secondary'
+                  msg.role === 'ai' ? 'bg-accent text-foreground dark:text-white' : 'bg-secondary'
                 }`}>
                   {msg.role === 'ai' ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
                 </div>
                 <div className={`p-3 rounded-2xl ${
                   msg.role === 'user'
-                    ? 'bg-accent text-black'
+                    ? 'bg-accent text-foreground dark:text-white'
                     : 'glass-card'
                 }`}>
                   <p className="text-sm">{msg.content}</p>

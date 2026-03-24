@@ -102,8 +102,8 @@ const Flashcards = () => {
   };
 
   return (
-    <div className="mx-auto max-w-2xl px-5 pb-28 pt-14 text-white">
-      <motion.div {...fadeInUp} className="glass-card rounded-[2rem] bg-black/40 border border-white/10 p-6 shadow-xl">
+    <div className="mx-auto max-w-2xl px-5 pb-28 pt-14 text-foreground bg-background">
+      <motion.div {...fadeInUp} className="glass-card rounded-[2rem] bg-card/75 border border-border p-6 shadow-xl">
         <div className="flex items-center gap-2 mb-4"><Sparkles className="h-5 w-5 text-accent" /><h2 className="text-xl font-semibold">Flashcards</h2></div>
 
         <div className="mb-4">
