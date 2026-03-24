@@ -51,66 +51,111 @@ const TodayScreen = () => {
     return groups;
   }, [filteredTasks]);
 
-  const displayDate = new Date(selectedDate + 'T12:00:00');
-  const dateStr = displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-
-  const groupOrder = ['Morning', 'Afternoon', 'Evening', 'Unscheduled'];
-
   return (
-    <div className="mx-auto max-w-2xl px-5 pb-28 pt-14">
+    <div className="max-w-7xl mx-auto">
       {/* Header */}
       <motion.div {...fadeInUp} className="mb-6">
         <p className="text-subhead uppercase tracking-widest">{dateStr}</p>
         <h1 className="text-headline mt-1">{isToday ? 'Today' : displayDate.toLocaleDateString('en-US', { weekday: 'long' })}</h1>
       </motion.div>
 
-      {/* Weekly Strip */}
-      <motion.div {...fadeInUp} className="mb-6">
-        <WeeklyStrip />
-      </motion.div>
+      {/* Bento Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column - Tasks */}
+        <div className="space-y-6">
+          {/* Weekly Strip */}
+          <motion.div {...fadeInUp}>
+            <WeeklyStrip />
+          </motion.div>
 
-      {/* Next Up */}
-      {nextUp && (
-        <div className="mb-6">
-          <NextUpCard task={nextUp} />
+          {/* Next Up */}
+          {nextUp && (
+            <motion.div {...fadeInUp}>
+              <NextUpCard task={nextUp} />
+            </motion.div>
+          )}
+
+          {/* Task Groups */}
+          <motion.div {...staggerContainer} className="space-y-6">
+            {groupOrder.map((group) => {
+              const groupTasks = grouped[group];
+              if (groupTasks.length === 0) return null;
+              return (
+                <motion.section key={group} {...fadeInUp}>
+                  <h2 className="text-caption mb-3 uppercase tracking-widest">{group}</h2>
+                  <div className="space-y-2">
+                    <AnimatePresence mode="popLayout">
+                      {groupTasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          onToggle={toggleTask}
+                          isMissed={isToday && !!task.time && timeToMinutes(task.time) < nowMinutes}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </motion.section>
+              );
+            })}
+          </motion.div>
+
+          {/* Quick Add */}
+          <motion.div {...fadeInUp}>
+            <QuickAdd />
+          </motion.div>
         </div>
-      )}
 
-      {/* Task Groups */}
-      <motion.div {...staggerContainer} className="space-y-8">
-        {groupOrder.map((group) => {
-          const groupTasks = grouped[group];
-          if (groupTasks.length === 0) return null;
-          return (
-            <motion.section key={group} {...fadeInUp}>
-              <h2 className="text-caption mb-3 uppercase tracking-widest">{group}</h2>
-              <div className="space-y-2">
-                <AnimatePresence mode="popLayout">
-                  {groupTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onToggle={toggleTask}
-                      isMissed={isToday && !!task.time && timeToMinutes(task.time) < nowMinutes}
-                    />
-                  ))}
-                </AnimatePresence>
+        {/* Right Column - Progress & Stats (Desktop only) */}
+        <div className="hidden lg:block space-y-6">
+          {/* Progress Overview */}
+          <motion.div {...fadeInUp} className="glass-card p-6">
+            <h3 className="text-subhead mb-4">Progress Overview</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Tasks Completed</span>
+                <span className="text-sm font-medium">{filteredTasks.filter(t => t.completed).length}/{filteredTasks.length}</span>
               </div>
-            </motion.section>
-          );
-        })}
-      </motion.div>
+              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-accent rounded-full transition-all duration-300" 
+                  style={{ width: `${filteredTasks.length > 0 ? (filteredTasks.filter(t => t.completed).length / filteredTasks.length) * 100 : 0}%` }} 
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Streak & Level */}
+          <motion.div {...fadeInUp} className="glass-card p-6">
+            <h3 className="text-subhead mb-4">Achievements</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-accent">{useStore.getState().streak}</div>
+                <div className="text-xs text-muted-foreground">Day Streak</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{useStore.getState().level}</div>
+                <div className="text-xs text-muted-foreground">Level</div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Exam Countdown */}
+          <motion.div {...fadeInUp} className="glass-card p-6">
+            <h3 className="text-subhead mb-4">Exam Countdown</h3>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-destructive">{Math.max(0, new Date(useStore.getState().examDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24) | 0}</div>
+              <div className="text-xs text-muted-foreground">Days Remaining</div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
 
       {filteredTasks.length === 0 && (
         <motion.div {...fadeInUp} className="glass-card p-8 text-center">
           <p className="text-muted-foreground text-sm">No tasks scheduled</p>
         </motion.div>
       )}
-
-      {/* Quick Add */}
-      <div className="mt-6">
-        <QuickAdd />
-      </div>
     </div>
   );
 };

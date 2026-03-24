@@ -1,80 +1,87 @@
 import { Subject } from '@/store/studyStore';
+import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 type MasteryHeatmapProps = {
   subjects: Subject[];
 };
 
-const getColor = (value: number) => {
-  if (value >= 90) return 'bg-amber-400 text-amber-800 border-amber-300';
-  if (value >= 50) return 'bg-emerald-400 text-emerald-900 border-emerald-300';
-  if (value >= 21) return 'bg-cyan-400 text-cyan-900 border-cyan-300';
-  return 'bg-blue-400 text-blue-900 border-blue-300';
+const getColor = (mastery: number) => {
+  if (mastery <= 20) return 'bg-blue-500/20 border-blue-500/30';
+  if (mastery <= 70) return 'bg-emerald-500/40 border-emerald-500/50';
+  return 'bg-orange-500 border-orange-500/60';
 };
 
-const getMastery = (subject: Subject) => {
-  const totals: { sum: number; count: number } = { sum: 0, count: 0 };
-  subject.chapters.forEach((chapter) => {
-    chapter.topics.forEach((topic) => {
-      totals.sum += topic.masteryScore;
-      totals.count += 1;
-    });
-  });
-  return totals.count === 0 ? 0 : Math.round(totals.sum / totals.count);
-};
-
-const getChapterMastery = (topicGroup: Subject['chapters'][0]) => {
-  const sums = topicGroup.topics.reduce((sum, t) => sum + t.masteryScore, 0);
-  return topicGroup.topics.length ? Math.round(sums / topicGroup.topics.length) : 0;
+const getNextReviewDate = (topic: { id: string; name: string }) => {
+  // This would come from the review data - for now return a placeholder
+  return new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleDateString();
 };
 
 const MasteryHeatmap = ({ subjects }: MasteryHeatmapProps) => {
-  const totalTopics = subjects.reduce((total, subject) => total + subject.chapters.reduce((ct, c) => ct + c.topics.length, 0), 0);
-  const totalMastery = subjects.reduce((total, subject) => total + getMastery(subject), 0);
-  const mapPercent = totalTopics === 0 ? 0 : Math.round(totalMastery / subjects.length);
+  const [hoveredTopic, setHoveredTopic] = useState<{ name: string; mastery: number; nextReview: string } | null>(null);
+
+  // Flatten all topics into a single array for the grid
+  const allTopics = subjects.flatMap(subject =>
+    subject.chapters.flatMap(chapter =>
+      chapter.topics.map(topic => ({
+        ...topic,
+        subjectName: subject.name,
+        chapterName: chapter.name,
+      }))
+    )
+  );
+
+  const totalTopics = allTopics.length;
+  const averageMastery = totalTopics > 0
+    ? Math.round(allTopics.reduce((sum, topic) => sum + topic.masteryScore, 0) / totalTopics)
+    : 0;
 
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-secondary p-4">
-        <p className="text-caption uppercase tracking-widest">Mastery Map</p>
+        <p className="text-caption uppercase tracking-widest">Syllabus Map</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Average confidence: <strong>{mapPercent}%</strong>
+          Average mastery: <strong>{averageMastery}%</strong> across {totalTopics} topics
         </p>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <span className="rounded-md bg-blue-100 px-2 py-1 text-[10px] text-blue-800">0–20 cold</span>
-          <span className="rounded-md bg-cyan-100 px-2 py-1 text-[10px] text-cyan-800">21–49 warming</span>
-          <span className="rounded-md bg-emerald-100 px-2 py-1 text-[10px] text-emerald-800">50–89 neutral</span>
-          <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-800">90+ hot</span>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+          <span className="rounded-md bg-blue-500/20 px-2 py-1 text-blue-700 border border-blue-500/30">0–20% Cold</span>
+          <span className="rounded-md bg-emerald-500/40 px-2 py-1 text-emerald-700 border border-emerald-500/50">21–70% Neutral</span>
+          <span className="rounded-md bg-orange-500 px-2 py-1 text-orange-800 border border-orange-500/60">71–100% Hot</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
-        {subjects.map((subject) => {
-          const subjectMastery = getMastery(subject);
-          return (
-            <div key={subject.id} className="rounded-xl border border-border bg-background p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">{subject.name}</p>
-                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getColor(subjectMastery)}`}>
-                  {subjectMastery}%
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {subject.chapters.map((chapter) => {
-                  const mastery = getChapterMastery(chapter);
-                  return (
-                    <div key={chapter.id} className="rounded-lg border border-border p-2">
-                      <p className="text-xs font-medium text-foreground truncate">{chapter.name}</p>
-                      <div className="mt-1 h-2.5 rounded-full bg-neutral-200">
-                        <div style={{ width: `${mastery}%` }} className={`${getColor(mastery)} h-2.5 rounded-full`} />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-1">{mastery}%</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+      <div className="rounded-xl border border-border bg-background p-4">
+        <div className="grid grid-cols-8 gap-1">
+          {allTopics.map((topic, index) => (
+            <motion.div
+              key={topic.id}
+              className={`aspect-square rounded border cursor-pointer ${getColor(topic.masteryScore)}`}
+              whileHover={{ scale: 1.1 }}
+              onHoverStart={() => setHoveredTopic({
+                name: topic.name,
+                mastery: topic.masteryScore,
+                nextReview: getNextReviewDate(topic)
+              })}
+              onHoverEnd={() => setHoveredTopic(null)}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.01 }}
+            />
+          ))}
+        </div>
+
+        {hoveredTopic && (
+          <motion.div
+            className="mt-4 p-3 bg-secondary rounded-lg"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <p className="font-medium text-sm">{hoveredTopic.name}</p>
+            <p className="text-xs text-muted-foreground">
+              Mastery: {hoveredTopic.mastery}% • Next review: {hoveredTopic.nextReview}
+            </p>
+          </motion.div>
+        )}
       </div>
     </div>
   );

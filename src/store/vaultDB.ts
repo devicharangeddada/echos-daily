@@ -16,11 +16,20 @@ export interface VaultSubject {
 export interface VaultMaterial {
   id: string;
   topicId: string;
-  fileName: string;
-  fileType: 'pdf' | 'image';
-  fileBlob: Blob;
+  name: string;
+  type: 'pdf' | 'image';
+  data: Blob;
   ocrText: string;
   createdAt: number;
+}
+
+export interface VaultReview {
+  id: string;
+  taskId: string;
+  quality: number;
+  nextReview: number;
+  interval: number;
+  easiness: number;
 }
 
 export interface VaultFlashcard {
@@ -37,6 +46,8 @@ export interface VaultFlashcard {
   dueDate: number;
   stability: number;
 }
+
+export type FlashcardItem = VaultFlashcard;
 
 export interface SyllabusNode {
   id: string;
@@ -55,15 +66,17 @@ class VaultDB extends Dexie {
   flashcards!: Table<VaultFlashcard, string>;
   subjects!: Table<VaultSubject, string>;
   materials!: Table<VaultMaterial, string>;
+  reviews!: Table<VaultReview, string>;
 
   constructor() {
-    super('echos-vault-db');
-    this.version(3).stores({
+    super('EchOS_Vault');
+    this.version(4).stores({
       pdfs: 'id, name, createdAt',
       subjects: 'id, name, color',
       syllabus: 'id, parentId, subject, chapter, topic',
-      materials: 'id, topicId, fileName, fileType, createdAt',
+      materials: '++id, topicId, name, type, createdAt',
       flashcards: 'id, topicId, dueDate, reps, easiness, interval, stability',
+      reviews: '++id, taskId, quality, nextReview, interval, easiness',
     }).upgrade((tx) => {
       // Add stability field to existing flashcards if missing
       return tx.table('flashcards').toCollection().modify((card: any) => {
@@ -105,6 +118,44 @@ export const addMaterial = async (material: Omit<VaultMaterial, 'id' | 'createdA
 
 export const getMaterialsByTopic = async (topicId: string) =>
   vaultDB.materials.where('topicId').equals(topicId).toArray();
+
+export const saveMaterial = async (topicId: string, file: File) => {
+  const { compressImageToDataUrl } = await import('@/lib/media-compressor');
+  
+  let data: Blob;
+  let type: 'pdf' | 'image';
+  
+  if (file.type === 'application/pdf') {
+    type = 'pdf';
+    data = file;
+  } else if (file.type.startsWith('image/')) {
+    type = 'image';
+    // Compress image before storing
+    const compressedDataUrl = await compressImageToDataUrl(file);
+    // Convert data URL back to blob
+    const response = await fetch(compressedDataUrl);
+    data = await response.blob();
+  } else {
+    throw new Error('Unsupported file type');
+  }
+
+  return addMaterial({
+    topicId,
+    name: file.name,
+    type,
+    data,
+    ocrText: '', // Will be populated by OCR worker
+  });
+};
+
+export const addReview = async (review: Omit<VaultReview, 'id'>) => {
+  const id = crypto.randomUUID();
+  await vaultDB.reviews.add({ ...review, id });
+  return id;
+};
+
+export const getReviewsByTask = async (taskId: string) =>
+  vaultDB.reviews.where('taskId').equals(taskId).toArray();
 
 export const addSyllabusNode = async (node: Omit<SyllabusNode, 'id'>) => {
   const id = crypto.randomUUID();

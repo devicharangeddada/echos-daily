@@ -424,7 +424,7 @@ const SyllabusTree = () => {
                                   className="flex w-full items-center gap-3 px-5 py-2.5 pl-16 hover:bg-secondary/50 transition-colors cursor-move"
                                 >
                                   <div className={`h-2 w-2 rounded-full ${statusColors[topic.status]}`} />
-                                  <span className="flex-1 text-left text-sm text-foreground">{topic.name}</span>
+                                  <span className="flex-1 text-left text-sm text-foreground truncate">{topic.name}</span>
                                   <span className="text-[10px] text-muted-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>
                                     {topic.masteryScore}%
                                   </span>

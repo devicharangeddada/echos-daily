@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { calculateNextReview } from '@/lib/srs-logic';
+import { compareRecall } from '@/lib/ai-recall';
+import { addReview } from '@/store/vaultDB';
 
 export interface ResourceLink {
   id: string;
@@ -119,6 +122,8 @@ interface StoreState {
   updateWeeklyStats: () => void;
   updateSettings: (settings: Partial<Settings>) => void;
   setSelectedDate: (date: string) => void;
+  reviewTask: (taskId: string, quality: number) => Promise<void>;
+  brainDump: (taskId: string, userRecall: string, extractedText: string) => Promise<{ similarityScore: number; suggestedQuality: number }>;
   setLockdown: (enabled: boolean) => void;
   setExamDate: (date: string) => void;
   grantXP: (amount: number) => void;
@@ -363,6 +368,70 @@ export const useStore = create<StoreState>()(
         })),
 
       setSelectedDate: (date) => set({ selectedDate: date }),
+
+      reviewTask: async (taskId, quality) => {
+        // Get existing reviews for this task to calculate SM2 parameters
+        const { getReviewsByTask } = await import('@/store/vaultDB');
+        const existingReviews = await getReviewsByTask(taskId);
+
+        // Calculate current SM2 state from review history
+        let easiness = 2.5;
+        let interval = 1;
+        let reps = 0;
+
+        if (existingReviews.length > 0) {
+          // Use the most recent review to get current state
+          const lastReview = existingReviews[existingReviews.length - 1];
+          easiness = lastReview.easiness;
+          interval = lastReview.interval;
+          reps = existingReviews.filter(r => r.quality >= 3).length;
+        }
+
+        // Create mock flashcard for SM2 calculation
+        const mockCard: Partial<FlashcardItem> = {
+          easiness,
+          interval,
+          reps,
+          lastReview: Date.now(),
+          dueDate: Date.now(),
+          stability: 0,
+        };
+
+        const updates = calculateNextReview(mockCard, quality);
+
+        // Store the review in IndexedDB
+        await addReview({
+          taskId,
+          quality,
+          nextReview: updates.dueDate || Date.now() + (updates.interval || 1) * 24 * 60 * 60 * 1000,
+          interval: updates.interval || 1,
+          easiness: updates.easiness || 2.5,
+        });
+
+        // Update task stability
+        set((state) => ({
+          tasks: state.tasks.map(t =>
+            t.id === taskId
+              ? { ...t, stability: updates.stability || 0 }
+              : t
+          ),
+        }));
+      },
+
+      brainDump: async (taskId, userRecall, extractedText) => {
+        const result = await compareRecall(userRecall, extractedText);
+
+        // Automatically review the task with the suggested quality
+        await new Promise<void>((resolve) => {
+          set((state) => {
+            state.reviewTask(taskId, result.suggestedQuality);
+            resolve();
+            return state;
+          });
+        });
+
+        return result;
+      },
     }),
     { name: 'echos-storage' }
   )

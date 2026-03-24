@@ -38,7 +38,7 @@ const TaskCard = ({ task, onToggle, isMissed }: TaskCardProps) => {
       layout
       {...fadeInUp}
       {...hoverLift}
-      className={`glass-card flex items-center gap-4 px-5 py-4 cursor-pointer select-none ${
+      className={`w-full rounded-[2rem] p-5 md:p-6 shadow-sm border border-border/50 bg-card/50 backdrop-blur-md cursor-pointer select-none ${
         task.completed ? 'opacity-50' : ''
       }`}
       onClick={() => {

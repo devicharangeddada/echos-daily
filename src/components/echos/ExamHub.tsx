@@ -55,7 +55,7 @@ const ExamHub = () => {
       </motion.div>
 
       {/* Stats strip */}
-      <motion.div {...fadeInUp} className="grid grid-cols-3 gap-3 mb-6">
+      <motion.div {...fadeInUp} className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="glass-card p-4 text-center">
           <p className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{daysLeft}</p>
           <p className="text-caption mt-1">Days Left</p>
