@@ -22,7 +22,7 @@ const BottomNav = ({ active, onChange, hidden }: BottomNavProps) => {
   if (hidden) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 select-none">
       <div className="mx-auto max-w-lg px-4 pb-2">
         <div className="glass-card flex items-center justify-around px-2 py-2 shadow-lg shadow-primary/5">
           {tabs.map((tab) => {
@@ -32,7 +32,7 @@ const BottomNav = ({ active, onChange, hidden }: BottomNavProps) => {
               <motion.button
                 key={tab.id}
                 onClick={() => onChange(tab.id)}
-                className={`relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 transition-colors ${
+                className={`relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-3 min-h-[44px] transition-colors ${
                   isActive ? 'text-foreground' : 'text-muted-foreground'
                 }`}
                 whileTap={{ scale: 0.92, transition: echosTransition }}
