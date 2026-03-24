@@ -46,9 +46,9 @@ const Flashcards = () => {
     setLoading(true);
     try {
       const model = await pipeline('text2text-generation', 'Xenova/distilbart-cnn-6-6');
-      const result = await model(noteInput);
+      const result = await model(noteInput) as any;
       const generated = result[0]?.generated_text || noteInput;
-      const lines = generated.split('\n').filter(Boolean).slice(0, 3);
+      const lines = (generated as string).split('\n').filter(Boolean).slice(0, 3);
       await Promise.all(lines.map((line, i) => addFlashcard({
         front: line.slice(0, 80),
         back: line,
