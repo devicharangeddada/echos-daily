@@ -461,7 +461,7 @@ const FocusScreen = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setHum((v) => !v)}
-                className={`rounded-full px-3 py-1 text-xs ${hum ? 'bg-accent text-foreground' : 'bg-background/10 dark:bg-background/20 text-foreground'}`}
+                className={`rounded-full px-3 py-1 text-xs ${hum ? 'bg-accent text-accent-foreground' : 'bg-secondary text-foreground'}`}
               >Transformer Hum</button>
               <button
                 onClick={() => setWhiteNoise((v) => !v)}
