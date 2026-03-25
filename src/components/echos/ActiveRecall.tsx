@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useStudyStore } from '@/store/studyStore';
 import { useStore } from '@/store/useStore';
 import { playSound } from '@/lib/sounds';
-import { RotateCcw, CheckCircle2, ThumbUp, ThumbDown, ImageIcon } from 'lucide-react';
+import { RotateCcw, CheckCircle2, ThumbsUp, ThumbsDown, ImageIcon } from 'lucide-react';
 
 interface ActiveRecallProps {
   subjectId: string;
@@ -43,7 +43,7 @@ const ActiveRecall = ({ subjectId, chapterId, topicId }: ActiveRecallProps) => {
   };
 
   const handleResult = (isEasy: boolean) => {
-    reviewCard(subjectId, chapterId, topicId, card.id, isEasy ? 1 : 0);
+    reviewCard(subjectId, chapterId, topicId, card.id, isEasy);
     if (settings.soundSettings?.enabled && isEasy) {
       playSound('taskComplete', settings.soundSettings?.volume ?? 0.5);
     }
@@ -54,9 +54,9 @@ const ActiveRecall = ({ subjectId, chapterId, topicId }: ActiveRecallProps) => {
     setShowBack(false);
   };
 
-  const masteryLabel = () => {
-    if (card.mastery >= 4) return 'Easy';
-    if (card.mastery >= 2) return 'Medium';
+  const stabilityLabel = () => {
+    if (card.stability >= 80) return 'Easy';
+    if (card.stability >= 40) return 'Medium';
     return 'Hard';
   };
 
@@ -117,19 +117,19 @@ const ActiveRecall = ({ subjectId, chapterId, topicId }: ActiveRecallProps) => {
           onClick={() => handleResult(false)}
           className="flex items-center gap-1 rounded-lg border border-destructive px-3 py-2 text-sm text-destructive"
         >
-          <ThumbDown className="h-4 w-4" /> Hard
+          <ThumbsDown className="h-4 w-4" /> Hard
         </button>
         <button
           type="button"
           onClick={() => handleResult(true)}
-          className="flex items-center gap-1 rounded-lg bg-success/15 px-3 py-2 text-sm text-success"
+          className="flex items-center gap-1 rounded-lg bg-primary/15 px-3 py-2 text-sm text-primary"
         >
-          <ThumbUp className="h-4 w-4" /> Easy
+          <ThumbsUp className="h-4 w-4" /> Easy
         </button>
       </div>
 
       <div className="mt-2 text-[11px] text-muted-foreground">
-        Mastery: {masteryLabel()} • Next review: {new Date(card.nextReview).toLocaleString()}
+        Mastery: {stabilityLabel()} • Next review: {new Date(card.dueDate).toLocaleString()}
       </div>
     </div>
   );

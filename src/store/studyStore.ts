@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { calculateNextReview, getStabilityScore } from '@/lib/srs-logic';
+import type { FlashcardItem } from '@/store/vaultDB';
 
 export interface Attachment {
   id: string;
@@ -12,7 +13,7 @@ export interface Attachment {
 export interface VaultMedia {
   id: string;
   type: 'image' | 'pdf';
-  data: string; // dataURL/base64 PDF data
+  data: string;
   label: string;
   createdAt: number;
 }
@@ -35,7 +36,7 @@ export interface Flashcard {
   q: string;
   a: string;
   ease: number;
-  nextReview: number; // timestamp
+  nextReview: number;
   interval: number;
   reps: number;
   stability: number;
@@ -52,7 +53,7 @@ export interface Topic {
   id: string;
   name: string;
   status: 'not-started' | 'in-progress' | 'completed' | 'revised';
-  masteryScore: number; // 0-100
+  masteryScore: number;
   studyPlan: { pom: string; rom: string };
   flashcards: Flashcard[];
   pqps: PQP[];
@@ -62,7 +63,7 @@ export interface Topic {
     extractedText: string;
     flashcards: VaultFlashcard[];
   };
-  completedAt?: number; // timestamp for revision scheduling
+  completedAt?: number;
 }
 
 export interface Chapter {
@@ -112,7 +113,6 @@ interface StudyState {
 
 const uid = () => crypto.randomUUID();
 
-// SM2 calculations delegated to srs-logic functions
 const mapTopic = (subjects: Subject[], sId: string, cId: string, tId: string, fn: (t: Topic) => Topic): Subject[] =>
   subjects.map((s) =>
     s.id !== sId ? s : {
@@ -125,6 +125,8 @@ const mapTopic = (subjects: Subject[], sId: string, cId: string, tId: string, fn
       ),
     }
   );
+
+const defaultVault = (): Topic['vault'] => ({ media: [], extractedText: '', flashcards: [] });
 
 const defaultSubjects: Subject[] = [
   {
@@ -140,16 +142,18 @@ const defaultSubjects: Subject[] = [
             id: uid(), name: "Kirchhoff's Laws", status: 'not-started', masteryScore: 0,
             studyPlan: { pom: 'Read chapter 3, derive KCL/KVL', rom: 'Practice 5 circuit problems' },
             flashcards: [
-              { id: uid(), q: "State Kirchhoff's Current Law", a: 'The sum of currents entering a node equals the sum leaving it', ease: 2.5, nextReview: Date.now(), interval: 1, reps: 0 },
-              { id: uid(), q: 'What is KVL?', a: 'The sum of voltage drops around any closed loop equals zero', ease: 2.5, nextReview: Date.now(), interval: 1, reps: 0 },
+              { id: uid(), q: "State Kirchhoff's Current Law", a: 'The sum of currents entering a node equals the sum leaving it', ease: 2.5, nextReview: Date.now(), interval: 1, reps: 0, stability: 0 },
+              { id: uid(), q: 'What is KVL?', a: 'The sum of voltage drops around any closed loop equals zero', ease: 2.5, nextReview: Date.now(), interval: 1, reps: 0, stability: 0 },
             ],
             pqps: [{ id: uid(), question: 'Find current through R2 in a series-parallel circuit', solution: 'Use KVL + node analysis', status: 'unattempted' }],
-            attachments: [],            vault: { media: [], extractedText: '', flashcards: [] },          },
+            attachments: [],
+            vault: defaultVault(),
+          },
           {
             id: uid(), name: 'Thevenin & Norton', status: 'not-started', masteryScore: 0,
             studyPlan: { pom: 'Study equivalence theorems', rom: 'Solve 3 Thevenin problems' },
             flashcards: [], pqps: [], attachments: [],
-            vault: { media: [], extractedText: '', flashcards: [] },
+            vault: defaultVault(),
           },
         ],
       },
@@ -161,7 +165,7 @@ const defaultSubjects: Subject[] = [
             id: uid(), name: "Maxwell's Equations", status: 'not-started', masteryScore: 0,
             studyPlan: { pom: 'Derive all 4 equations', rom: 'Explain in Feynman style' },
             flashcards: [], pqps: [], attachments: [],
-            vault: { media: [], extractedText: '', flashcards: [] },
+            vault: defaultVault(),
           },
         ],
       },
@@ -203,8 +207,9 @@ export const useStudyStore = create<StudyState>()(
                 c.id !== chapterId ? c : {
                   ...c,
                   topics: [...c.topics, {
-                    id: uid(), name, status: 'not-started', masteryScore: 0,
+                    id: uid(), name, status: 'not-started' as const, masteryScore: 0,
                     studyPlan: { pom: '', rom: '' }, flashcards: [], pqps: [], attachments: [],
+                    vault: defaultVault(),
                   }],
                 }
               ),
@@ -283,18 +288,17 @@ export const useStudyStore = create<StudyState>()(
             ...t,
             flashcards: t.flashcards.map((fc) => {
               if (fc.id !== cardId) return fc;
-              const updated = calculateNextReview({
+              const mockCard: FlashcardItem = {
                 id: fc.id,
-                topicId: t.id,
-                question: fc.q,
-                answer: fc.a,
+                topicId: tId,
                 easiness: fc.ease,
                 interval: fc.interval,
                 reps: fc.reps,
                 lastReview: Date.now(),
                 dueDate: Date.now(),
                 stability: fc.stability ?? 0,
-              }, quality);
+              };
+              const updated = calculateNextReview(mockCard, quality);
               return {
                 ...fc,
                 ease: updated.easiness ?? fc.ease,
@@ -338,8 +342,8 @@ export const useStudyStore = create<StudyState>()(
           subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
             ...t,
             vault: {
-              ...t.vault,
-              media: [...(t.vault?.media ?? []), { ...media, id: uid(), createdAt: Date.now() }],
+              ...(t.vault ?? defaultVault()),
+              media: [...((t.vault?.media) ?? []), { ...media, id: uid(), createdAt: Date.now() }],
             },
           })),
         })),
@@ -349,8 +353,8 @@ export const useStudyStore = create<StudyState>()(
           subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
             ...t,
             vault: {
-              ...t.vault,
-              media: (t.vault?.media ?? []).filter((m) => m.id !== mediaId),
+              ...(t.vault ?? defaultVault()),
+              media: ((t.vault?.media) ?? []).filter((m) => m.id !== mediaId),
             },
           })),
         })),
@@ -360,7 +364,7 @@ export const useStudyStore = create<StudyState>()(
           subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
             ...t,
             vault: {
-              ...t.vault,
+              ...(t.vault ?? defaultVault()),
               extractedText: text,
             },
           })),
@@ -371,19 +375,19 @@ export const useStudyStore = create<StudyState>()(
           subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
             ...t,
             vault: {
-              ...t.vault,
+              ...(t.vault ?? defaultVault()),
               flashcards: [
                 ...((t.vault?.flashcards) ?? []),
-                ...cards.map((c) => ({
-                  ...c,
+                ...cards.map((c): VaultFlashcard => ({
                   id: uid(),
-                  question: c.question ?? c.q ?? c.front ?? '',
-                  answer: c.answer ?? c.a ?? c.back ?? '',
-                  lastReviewed: Date.now(),
+                  q: c.q,
+                  a: c.a,
+                  sourceMediaId: c.sourceMediaId,
+                  easiness: c.easiness ?? 2.5,
+                  interval: c.interval ?? 1,
+                  reps: c.reps ?? 0,
+                  lastReview: Date.now(),
                   dueDate: Date.now(),
-                  easiness: 2.5,
-                  interval: 1,
-                  reps: 0,
                   stability: 0,
                 })),
               ],
@@ -396,15 +400,21 @@ export const useStudyStore = create<StudyState>()(
           subjects: mapTopic(s.subjects, sId, cId, tId, (t) => ({
             ...t,
             vault: {
-              ...t.vault,
-              flashcards: (t.vault?.flashcards ?? []).map((card) => {
+              ...(t.vault ?? defaultVault()),
+              flashcards: ((t.vault?.flashcards) ?? []).map((card) => {
                 if (card.id !== cardId) return card;
                 const quality = isEasy ? 5 : 3;
-                const updated = calculateNextReview({
-                  ...card,
-                  question: card.question ?? card.q ?? card.front ?? '',
-                  answer: card.answer ?? card.a ?? card.back ?? '',
-                }, quality);
+                const mockCard: FlashcardItem = {
+                  id: card.id,
+                  topicId: tId,
+                  easiness: card.easiness,
+                  interval: card.interval,
+                  reps: card.reps,
+                  lastReview: card.lastReview,
+                  dueDate: card.dueDate,
+                  stability: card.stability,
+                };
+                const updated = calculateNextReview(mockCard, quality);
                 return {
                   ...card,
                   easiness: updated.easiness ?? card.easiness,
@@ -419,7 +429,6 @@ export const useStudyStore = create<StudyState>()(
           })),
         })),
 
-
       getStudyTodayTopics: () => {
         const { subjects } = get();
         const results: { subject: Subject; chapter: Chapter; topic: Topic }[] = [];
@@ -428,18 +437,15 @@ export const useStudyStore = create<StudyState>()(
         for (const subject of subjects) {
           for (const chapter of subject.chapters) {
             for (const topic of chapter.topics) {
-              // Priority 1: Revision due (completed topics after 1, 3, 7 days)
               if (topic.status === 'completed' && topic.completedAt) {
                 const daysSince = (now - topic.completedAt) / 86400000;
                 if (daysSince >= 1 && daysSince < 2) results.unshift({ subject, chapter, topic });
                 else if (daysSince >= 3 && daysSince < 4) results.unshift({ subject, chapter, topic });
                 else if (daysSince >= 7 && daysSince < 8) results.unshift({ subject, chapter, topic });
               }
-              // Priority 2: Low mastery topics
               if (topic.masteryScore < 50 && topic.status !== 'completed') {
                 results.push({ subject, chapter, topic });
               }
-              // Priority 3: Flashcards due
               if (topic.flashcards.some((fc) => fc.nextReview <= now)) {
                 if (!results.find((r) => r.topic.id === topic.id)) {
                   results.push({ subject, chapter, topic });
@@ -482,7 +488,7 @@ export const useStudyStore = create<StudyState>()(
           const newTopic: Topic = {
             id: uid(), name: topicName, status: 'not-started', masteryScore: 0,
             studyPlan: { pom: '', rom: '' }, flashcards: [], pqps: [], attachments: [],
-            vault: { media: [], extractedText: '', flashcards: [] },
+            vault: defaultVault(),
           };
           subjects[sIdx] = {
             ...subjects[sIdx],
