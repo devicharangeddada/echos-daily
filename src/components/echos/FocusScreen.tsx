@@ -465,7 +465,7 @@ const FocusScreen = () => {
               >Transformer Hum</button>
               <button
                 onClick={() => setWhiteNoise((v) => !v)}
-                className={`rounded-full px-3 py-1 text-xs ${whiteNoise ? 'bg-accent text-foreground' : 'bg-background/10 dark:bg-background/20 text-foreground'}`}
+                className={`rounded-full px-3 py-1 text-xs ${whiteNoise ? 'bg-accent text-accent-foreground' : 'bg-secondary text-foreground'}`}
               >White Noise</button>
             </div>
           </div>
