@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Pencil, PlusSquare, Checkbox, ReloadCcw } from 'lucide-react';
-import { useStudyStore, VaultFlashcard } from '@/store/studyStore';
+import { Sparkles, Pencil, PlusSquare, RotateCcw } from 'lucide-react';
+import { useStudyStore } from '@/store/studyStore';
 import { textToEmbedding, cosineSimilarity } from '@/lib/semantic-utils';
 
 interface RecallGenProps {
@@ -57,7 +57,7 @@ const RecallGen = ({ subjectId, chapterId, topicId }: RecallGenProps) => {
       .find((t) => t.id === topicId)
   );
   const addTopicVaultFlashcards = useStudyStore((s) => s.addTopicVaultFlashcards);
-  const [drafts, setDrafts] = useState<VaultFlashcard[]>([]);
+  const [drafts, setDrafts] = useState<{ id: string; q: string; a: string; sourceMediaId: string }[]>([]);
   const [isReviewing, setIsReviewing] = useState(false);
   const [brainDump, setBrainDump] = useState('');
   const [similarity, setSimilarity] = useState<number | null>(null);
@@ -72,8 +72,6 @@ const RecallGen = ({ subjectId, chapterId, topicId }: RecallGenProps) => {
       id: crypto.randomUUID(),
       q: c.q,
       a: c.a,
-      lastReviewed: Date.now(),
-      mastery: 0,
       sourceMediaId: topic?.vault.media[0]?.id ?? '',
     }));
     setDrafts(mapped);
@@ -85,8 +83,10 @@ const RecallGen = ({ subjectId, chapterId, topicId }: RecallGenProps) => {
     addTopicVaultFlashcards(subjectId, chapterId, topicId, drafts.map((d) => ({
       q: d.q,
       a: d.a,
-      mastery: d.mastery,
       sourceMediaId: d.sourceMediaId,
+      easiness: 2.5,
+      interval: 1,
+      reps: 0,
     })));
     setIsReviewing(false);
     setDrafts([]);
@@ -128,7 +128,7 @@ const RecallGen = ({ subjectId, chapterId, topicId }: RecallGenProps) => {
               }
             }}
             disabled={!brainDump.trim() || !extractedText.trim()}
-            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white"
+            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground"
           >
             {isComparing ? 'Comparing...' : 'Evaluate Recall'}
           </button>
@@ -149,7 +149,7 @@ const RecallGen = ({ subjectId, chapterId, topicId }: RecallGenProps) => {
           className="inline-flex items-center gap-2 rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent/25 transition"
           disabled={!hasCards}
         >
-          <ReloadCcw className="h-4 w-4" />
+          <RotateCcw className="h-4 w-4" />
           Regenerate
         </button>
       </div>
@@ -162,7 +162,7 @@ const RecallGen = ({ subjectId, chapterId, topicId }: RecallGenProps) => {
         <button
           type="button"
           onClick={regenerate}
-          className="rounded-lg border border-border bg-foreground px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary transition"
+          className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary/80 transition"
         >
           <Sparkles className="mr-1 inline h-4 w-4" /> Generate Draft Flashcards
         </button>
@@ -174,13 +174,13 @@ const RecallGen = ({ subjectId, chapterId, topicId }: RecallGenProps) => {
             <div key={card.id} className="rounded-xl border border-secondary p-3">
               <div className="text-[11px] text-muted-foreground">Draft #{idx + 1}</div>
               <input
-                className="mt-1 w-full rounded-md border border-border px-2 py-1 text-sm"
+                className="mt-1 w-full rounded-md border border-border px-2 py-1 text-sm bg-background text-foreground"
                 value={card.q}
                 onChange={(e) => updatedCard(card.id, 'q', e.target.value)}
                 placeholder="Question"
               />
               <textarea
-                className="mt-2 w-full min-h-[70px] rounded-md border border-border px-2 py-1 text-sm"
+                className="mt-2 w-full min-h-[70px] rounded-md border border-border px-2 py-1 text-sm bg-background text-foreground"
                 value={card.a}
                 onChange={(e) => updatedCard(card.id, 'a', e.target.value)}
                 placeholder="Answer"
@@ -191,7 +191,7 @@ const RecallGen = ({ subjectId, chapterId, topicId }: RecallGenProps) => {
             <button
               type="button"
               onClick={saveDrafts}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground"
             >
               <PlusSquare className="h-4 w-4" /> Add to My Deck
             </button>

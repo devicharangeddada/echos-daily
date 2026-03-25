@@ -455,17 +455,17 @@ const FocusScreen = () => {
           </div>
         </motion.div>
 
-        <motion.div {...fadeInUp} className="glass-card p-4 mb-6 rounded-[2rem] bg-black/40 border border-white/10">
+        <motion.div {...fadeInUp} className="glass-card p-4 mb-6">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-wider text-muted-foreground">Audio Ambience</span>
             <div className="flex gap-2">
               <button
                 onClick={() => setHum((v) => !v)}
-                className={`rounded-full px-3 py-1 text-xs ${hum ? 'bg-accent text-foreground' : 'bg-background/10 dark:bg-background/20 text-foreground'}`}
+                className={`rounded-full px-3 py-1 text-xs ${hum ? 'bg-accent text-accent-foreground' : 'bg-secondary text-foreground'}`}
               >Transformer Hum</button>
               <button
                 onClick={() => setWhiteNoise((v) => !v)}
-                className={`rounded-full px-3 py-1 text-xs ${whiteNoise ? 'bg-accent text-foreground' : 'bg-background/10 dark:bg-background/20 text-foreground'}`}
+                className={`rounded-full px-3 py-1 text-xs ${whiteNoise ? 'bg-accent text-accent-foreground' : 'bg-secondary text-foreground'}`}
               >White Noise</button>
             </div>
           </div>

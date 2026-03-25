@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, FileText, ImageIcon, Eye, Sparkles } from 'lucide-react';
+import { Plus, X, FileText, ImageIcon, Sparkles } from 'lucide-react';
 import { useStudyStore, VaultMedia } from '@/store/studyStore';
 import { compressImageToDataUrl, fileToDataUrl } from '@/lib/media-compressor';
 import { extractTextFromImage } from '@/lib/ocr-worker';
@@ -47,13 +47,13 @@ const MediaHub = ({ subjectId, chapterId, topicId }: MediaHubProps) => {
         label: file.name,
       });
 
-      // Local-first vault material store in IndexedDB
+      // Store in IndexedDB via vaultDB
       try {
         await addMaterial({
           topicId,
-          fileName: file.name,
-          fileType: type,
-          fileBlob: file,
+          name: file.name,
+          type,
+          data: file,
           ocrText: type === 'image' ? (await extractTextFromImage(dataUrl)) : '',
         });
       } catch (dexieError) {
@@ -79,7 +79,7 @@ const MediaHub = ({ subjectId, chapterId, topicId }: MediaHubProps) => {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 text-xs font-semibold text-background hover:brightness-90 transition"
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition"
         >
           <Plus className="h-4 w-4" />
           Add Note
@@ -122,7 +122,7 @@ const MediaHub = ({ subjectId, chapterId, topicId }: MediaHubProps) => {
             type="button"
             className="group relative overflow-hidden rounded-xl border border-border bg-secondary p-2 text-left hover:border-accent"
           >
-            <div className="h-28 overflow-hidden rounded-lg bg-black/5 flex items-center justify-center">
+            <div className="h-28 overflow-hidden rounded-lg bg-muted flex items-center justify-center">
               {item.type === 'image' ? (
                 <img src={item.data} alt={item.label} className="h-full w-full object-cover" />
               ) : (
@@ -146,16 +146,16 @@ const MediaHub = ({ subjectId, chapterId, topicId }: MediaHubProps) => {
       <AnimatePresence>
         {selectedMedia && (
           <motion.div
-            className="fixed left-0 top-0 z-50 flex h-screen w-screen items-center justify-center bg-black/40 backdrop-blur-xl p-4"
+            className="fixed left-0 top-0 z-50 flex h-screen w-screen items-center justify-center bg-background/80 backdrop-blur-xl p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <motion.div layoutId={selectedMedia.id} className="relative w-full max-w-3xl rounded-2xl border border-white/20 bg-background p-4 shadow-2xl">
+            <motion.div layoutId={selectedMedia.id} className="relative w-full max-w-3xl rounded-2xl border border-border bg-card p-4 shadow-2xl">
               <button
                 type="button"
                 onClick={() => setSelectedMedia(null)}
-                className="absolute right-3 top-3 rounded-full bg-black/40 p-2 text-white"
+                className="absolute right-3 top-3 rounded-full bg-secondary p-2 text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>

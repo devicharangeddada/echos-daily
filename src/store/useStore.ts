@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { calculateNextReview } from '@/lib/srs-logic';
 import { compareRecall } from '@/lib/ai-recall';
 import { addReview } from '@/store/vaultDB';
+import type { FlashcardItem } from '@/store/vaultDB';
 
 export interface ResourceLink {
   id: string;
@@ -15,18 +16,17 @@ export interface Task {
   id: string;
   title: string;
   time: string | null;
-  date: string | null; // YYYY-MM-DD or null (means "today")
+  date: string | null;
   category: 'work' | 'personal' | 'health' | 'learning' | 'education';
   subcategory: string;
   subCategory?: 'study' | 'homework';
   completed: boolean;
-  // Education-specific
   eduType?: 'study' | 'homework';
   resourceLinks?: string[];
   resources?: ResourceLink[];
   quickNotes?: string;
   notes?: string;
-  stability?: number; // 0-100 for mastery
+  stability?: number;
 }
 
 export interface FocusSession {
@@ -53,7 +53,7 @@ export interface SessionHistory {
 
 export interface FocusLog {
   id: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   durationMinutes: number;
   taskId: string | null;
 }
@@ -73,7 +73,7 @@ export interface ReminderSettings {
 
 export interface SoundSettings {
   enabled: boolean;
-  volume: number; // 0-100
+  volume: number;
   taskComplete: boolean;
   focusStart: boolean;
   focusEnd: boolean;
@@ -88,9 +88,9 @@ export interface Settings {
   theme: 'dark' | 'light' | 'system';
   soundSettings: SoundSettings;
   reminders: ReminderSettings;
-  focusDuration: number; // minutes
-  pomodoroWork: number; // minutes
-  pomodoroBreak: number; // minutes
+  focusDuration: number;
+  pomodoroWork: number;
+  pomodoroBreak: number;
   autoStartBreak: boolean;
   showXPAnimations: boolean;
   hapticFeedback: boolean;
@@ -110,7 +110,7 @@ interface StoreState {
   lockdown: boolean;
   examDate: string;
   settings: Settings;
-  selectedDate: string; // YYYY-MM-DD
+  selectedDate: string;
   addTask: (task: Omit<Task, 'id' | 'completed'>) => void;
   toggleTask: (id: string) => void;
   removeTask: (id: string) => void;
@@ -156,20 +156,14 @@ const defaultFocusLogs: FocusLog[] = [
   { id: 'fl6', date: toDateStr(new Date(Date.now() - 1 * 86400000)), durationMinutes: 25, taskId: null },
 ];
 
-const initialWeeklyStats: WeeklyStats = {
-  focusHours: 0,
-  tasksCompleted: 0,
-  consistencyScore: 0,
-};
+const initialWeeklyStats: WeeklyStats = { focusHours: 0, tasksCompleted: 0, consistencyScore: 0 };
 
 const calculateWeeklyStats = (tasks: Task[], focusLogs: FocusLog[]): WeeklyStats => {
-  const now = new Date();
   const last7 = new Set<string>();
   let focusMinutes = 0;
   let completed = 0;
   for (let i = 0; i < 7; i += 1) {
-    const d = toDateStr(new Date(Date.now() - i * 86400000));
-    last7.add(d);
+    last7.add(toDateStr(new Date(Date.now() - i * 86400000)));
   }
 
   focusLogs.forEach((log) => {
@@ -177,13 +171,12 @@ const calculateWeeklyStats = (tasks: Task[], focusLogs: FocusLog[]): WeeklyStats
   });
 
   const daysWithActivity = new Set<string>();
+  const now = new Date();
   tasks.forEach((t) => {
     const d = t.date || toDateStr(now);
-    if (last7.has(d)) {
-      if (t.completed) {
-        completed += 1;
-        daysWithActivity.add(d);
-      }
+    if (last7.has(d) && t.completed) {
+      completed += 1;
+      daysWithActivity.add(d);
     }
   });
 
@@ -245,19 +238,13 @@ export const useStore = create<StoreState>()(
       addTask: (task) =>
         set((state) => {
           const nextTasks = [...state.tasks, { ...task, id: crypto.randomUUID(), completed: false }];
-          return {
-            tasks: nextTasks,
-            weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs),
-          };
+          return { tasks: nextTasks, weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs) };
         }),
 
       toggleTask: (id) =>
         set((state) => {
           const nextTasks = state.tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
-          return {
-            tasks: nextTasks,
-            weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs),
-          };
+          return { tasks: nextTasks, weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs) };
         }),
 
       removeTask: (id) =>
@@ -269,33 +256,25 @@ export const useStore = create<StoreState>()(
       updateTask: (id, updates) =>
         set((state) => {
           const nextTasks = state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t));
-          return {
-            tasks: nextTasks,
-            weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs),
-          };
+          return { tasks: nextTasks, weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs) };
         }),
 
       setFocusSession: (session) =>
-        set((state) => ({
-          focusSession: { ...state.focusSession, ...session },
-        })),
+        set((state) => ({ focusSession: { ...state.focusSession, ...session } })),
 
       setActiveSession: (session) =>
-        set((state) => ({
-          activeSession: { ...state.activeSession, ...session },
-        })),
+        set((state) => ({ activeSession: { ...state.activeSession, ...session } })),
 
       addFocusLog: (log) =>
         set((state) => {
           const nextLogs = [...state.focusLogs, { ...log, id: crypto.randomUUID() }];
           const xpGain = Math.round(log.durationMinutes / 25 * 100);
           const nextXP = state.xp + xpGain;
-          const nextLevel = Math.floor(nextXP / 1000) + 1;
           return {
             focusLogs: nextLogs,
             weeklyStats: calculateWeeklyStats(state.tasks, nextLogs),
             xp: nextXP,
-            level: nextLevel,
+            level: Math.floor(nextXP / 1000) + 1,
             streak: state.streak + 1,
           };
         }),
@@ -307,88 +286,64 @@ export const useStore = create<StoreState>()(
           const nextLogs = [...state.focusLogs, { id: crypto.randomUUID(), date, durationMinutes: entry.duration, taskId: entry.taskId }];
           const xpGain = Math.round(entry.duration / 25 * 100);
           const nextXP = state.xp + xpGain;
-          const nextLevel = Math.floor(nextXP / 1000) + 1;
           return {
             sessionHistory: nextHistory,
             focusLogs: nextLogs,
             weeklyStats: calculateWeeklyStats(state.tasks, nextLogs),
             xp: nextXP,
-            level: nextLevel,
+            level: Math.floor(nextXP / 1000) + 1,
             streak: state.streak + 1,
           };
         }),
 
       updateWeeklyStats: () =>
-        set((state) => ({
-          weeklyStats: calculateWeeklyStats(state.tasks, state.focusLogs),
-        })),
+        set((state) => ({ weeklyStats: calculateWeeklyStats(state.tasks, state.focusLogs) })),
 
       setLockdown: (enabled) => set({ lockdown: enabled }),
-
       setExamDate: (date) => set({ examDate: date }),
 
       grantXP: (amount) =>
         set((state) => {
-          const bonus = Math.floor(Math.random() * 71) + 80; // 80-150
+          const bonus = Math.floor(Math.random() * 71) + 80;
           const totalGain = Math.round(amount * (1 + bonus / 100));
           const nextXP = state.xp + totalGain;
           const nextLevel = Math.floor(nextXP / 1000) + 1;
-          const earned = nextLevel > state.level;
-          return {
-            xp: nextXP,
-            level: nextLevel,
-            streak: earned ? state.streak + 1 : state.streak,
-            weeklyStats: { ...state.weeklyStats },
-          };
+          return { xp: nextXP, level: nextLevel, streak: nextLevel > state.level ? state.streak + 1 : state.streak };
         }),
 
       awardFocusChest: () =>
         set((state) => {
-          const base = 100;
-          const mega = Math.floor(Math.random() * 71) + 80;
-          const xpGain = base + mega;
+          const xpGain = 100 + Math.floor(Math.random() * 71) + 80;
           const nextXP = state.xp + xpGain;
-          const nextLevel = Math.floor(nextXP / 1000) + 1;
-          return {
-            xp: nextXP,
-            level: nextLevel,
-            streak: state.streak + 1,
-            weeklyStats: { ...state.weeklyStats },
-          };
+          return { xp: nextXP, level: Math.floor(nextXP / 1000) + 1, streak: state.streak + 1 };
         }),
 
       updateTaskStability: (id, stability) =>
-        set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === id ? { ...t, stability } : t)),
-        })),
+        set((state) => ({ tasks: state.tasks.map((t) => (t.id === id ? { ...t, stability } : t)) })),
 
       updateSettings: (s) =>
-        set((state) => ({
-          settings: { ...state.settings, ...s },
-        })),
+        set((state) => ({ settings: { ...state.settings, ...s } })),
 
       setSelectedDate: (date) => set({ selectedDate: date }),
 
       reviewTask: async (taskId, quality) => {
-        // Get existing reviews for this task to calculate SM2 parameters
         const { getReviewsByTask } = await import('@/store/vaultDB');
         const existingReviews = await getReviewsByTask(taskId);
 
-        // Calculate current SM2 state from review history
         let easiness = 2.5;
         let interval = 1;
         let reps = 0;
 
         if (existingReviews.length > 0) {
-          // Use the most recent review to get current state
           const lastReview = existingReviews[existingReviews.length - 1];
           easiness = lastReview.easiness;
           interval = lastReview.interval;
           reps = existingReviews.filter(r => r.quality >= 3).length;
         }
 
-        // Create mock flashcard for SM2 calculation
-        const mockCard: Partial<FlashcardItem> = {
+        const mockCard: FlashcardItem = {
+          id: taskId,
+          topicId: taskId,
           easiness,
           interval,
           reps,
@@ -399,7 +354,6 @@ export const useStore = create<StoreState>()(
 
         const updates = calculateNextReview(mockCard, quality);
 
-        // Store the review in IndexedDB
         await addReview({
           taskId,
           quality,
@@ -408,20 +362,15 @@ export const useStore = create<StoreState>()(
           easiness: updates.easiness || 2.5,
         });
 
-        // Update task stability
         set((state) => ({
           tasks: state.tasks.map(t =>
-            t.id === taskId
-              ? { ...t, stability: updates.stability || 0 }
-              : t
+            t.id === taskId ? { ...t, stability: updates.stability || 0 } : t
           ),
         }));
       },
 
       brainDump: async (taskId, userRecall, extractedText) => {
         const result = await compareRecall(userRecall, extractedText);
-
-        // Automatically review the task with the suggested quality
         await new Promise<void>((resolve) => {
           set((state) => {
             state.reviewTask(taskId, result.suggestedQuality);
@@ -429,7 +378,6 @@ export const useStore = create<StoreState>()(
             return state;
           });
         });
-
         return result;
       },
     }),
