@@ -24,7 +24,7 @@ const BottomNav = ({ active, onChange, hidden }: BottomNavProps) => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 select-none" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="mx-auto max-w-lg px-2 sm:px-4 pb-2">
-        <div className="glass-card flex items-center justify-around px-1 py-1.5 shadow-lg shadow-primary/5 overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-secondary/90 backdrop-blur-xl px-2 py-2 shadow-[0_16px_45px_rgba(0,0,0,0.24)] overflow-x-auto scrollbar-none">
           {tabs.map((tab) => {
             const isActive = active === tab.id;
             const Icon = tab.icon;
@@ -32,15 +32,15 @@ const BottomNav = ({ active, onChange, hidden }: BottomNavProps) => {
               <motion.button
                 key={tab.id}
                 onClick={() => onChange(tab.id)}
-                className={`relative flex flex-col items-center gap-0.5 rounded-xl px-2 sm:px-3 py-2.5 sm:py-3 min-h-[44px] min-w-[44px] transition-colors ${
-                  isActive ? 'text-foreground' : 'text-muted-foreground'
+                className={`relative flex shrink-0 flex-col items-center gap-0.5 rounded-full px-3 py-2 min-h-[44px] min-w-[65px] transition-colors duration-200 ${
+                  isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                 }`}
                 whileTap={{ scale: 0.92, transition: echosTransition }}
               >
                 {isActive && (
                   <motion.div
                     layoutId="nav-pill"
-                    className="absolute inset-0 rounded-xl bg-secondary"
+                    className="absolute inset-0 rounded-full bg-accent/15"
                     transition={echosTransition}
                   />
                 )}

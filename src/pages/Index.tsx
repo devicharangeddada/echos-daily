@@ -35,22 +35,22 @@ const Index = () => {
   useTheme();
 
   return (
-    <div className="flex min-h-screen">
-      {!isMobile && (
-        <DesktopSidebar activeTab={activeTab} onChange={setActiveTab} />
-      )}
+    <div className="min-h-screen bg-background text-foreground">
+      <DesktopSidebar activeTab={activeTab} onChange={setActiveTab} />
 
-      <div className="flex-1 p-3 sm:p-4 md:p-6 pb-28 md:pb-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0, transition: echosTransition }}
-            exit={{ opacity: 0, y: -10, transition: echosTransition }}
-          >
-            <Screen />
-          </motion.div>
-        </AnimatePresence>
+      <div className="mx-auto flex min-h-screen max-w-[1440px] flex-col px-4 pb-28 pt-6 sm:px-6 md:px-8 lg:px-10 xl:px-12">
+        <div className="w-full flex-1">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0, transition: echosTransition }}
+              exit={{ opacity: 0, y: -10, transition: echosTransition }}
+            >
+              <Screen />
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
 
       {isMobile && (

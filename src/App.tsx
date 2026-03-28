@@ -10,11 +10,9 @@ import NotFound from "./pages/NotFound.tsx";
 const queryClient = new QueryClient();
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
-  const isMobile = useIsMobile();
-
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main className={`w-full ${isMobile ? '' : 'ml-64'}`}>
+    <div className="min-h-screen bg-background text-foreground selection:bg-accent/20 selection:text-foreground">
+      <main className="mx-auto flex min-h-screen max-w-[1440px] flex-col px-3 py-4 sm:px-5 md:px-6 lg:px-8">
         {children}
       </main>
     </div>

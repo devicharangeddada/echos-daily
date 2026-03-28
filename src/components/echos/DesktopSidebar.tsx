@@ -23,18 +23,15 @@ interface DesktopSidebarProps {
 
 const DesktopSidebar = ({ activeTab, onChange }: DesktopSidebarProps) => {
   const isMobile = useIsMobile();
-  const [open, setOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const [open, setOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth >= 768;
+  });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isMounted) return;
     setOpen(!isMobile);
-  }, [isMobile, isMounted]);
+  }, [isMobile]);
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
