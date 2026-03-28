@@ -14,7 +14,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main className={`w-full ${isMobile ? 'pb-24' : 'ml-64 px-12'}`}>
+      <main className={`w-full ${isMobile ? '' : 'ml-64'}`}>
         {children}
       </main>
     </div>

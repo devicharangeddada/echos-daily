@@ -43,7 +43,7 @@ const SettingsScreen = () => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   if (!hasHydrated) {
-    return <div className="mx-auto max-w-2xl px-5 pb-28 pt-14 text-center text-sm text-muted-foreground">Loading settings...</div>;
+    return <div className="mx-auto max-w-2xl px-3 sm:px-5 pb-28 pt-10 sm:pt-14 text-center text-sm text-muted-foreground">Loading settings...</div>;
   }
 
   const settings: Settings = {
@@ -77,9 +77,20 @@ const SettingsScreen = () => {
     updateSettings({ theme });
     const root = document.documentElement;
     if (theme === 'light') {
+      root.classList.remove('dark');
       root.classList.add('light-theme');
-    } else {
+    } else if (theme === 'dark') {
       root.classList.remove('light-theme');
+      root.classList.add('dark');
+    } else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        root.classList.add('dark');
+        root.classList.remove('light-theme');
+      } else {
+        root.classList.remove('dark');
+        root.classList.add('light-theme');
+      }
     }
   };
 
@@ -93,18 +104,18 @@ const SettingsScreen = () => {
       <motion.div layout className="glass-card overflow-hidden">
         <motion.button
           onClick={() => toggleSection(id)}
-          className="flex w-full items-center gap-4 px-5 py-4"
+          className="flex w-full items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4"
           whileTap={{ scale: 0.98 }}
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/15">
             <Icon className="h-4 w-4 text-accent" />
           </div>
-          <div className="flex-1 text-left">
-            <p className="text-sm font-medium text-foreground">{title}</p>
-            <p className="text-[11px] text-muted-foreground">{subtitle}</p>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">{title}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{subtitle}</p>
           </div>
           <motion.div animate={{ rotate: isOpen ? 90 : 0 }} transition={echosTransition}>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </motion.div>
         </motion.button>
         <AnimatePresence>
@@ -115,7 +126,7 @@ const SettingsScreen = () => {
               exit={{ height: 0, opacity: 0, transition: echosTransition }}
               className="overflow-hidden border-t border-border"
             >
-              <div className="p-5 space-y-4">{children}</div>
+              <div className="p-4 sm:p-5 space-y-4">{children}</div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -126,18 +137,18 @@ const SettingsScreen = () => {
   const Toggle = ({ label, value, onChange, description }: {
     label: string; value: boolean; onChange: (v: boolean) => void; description?: string;
   }) => (
-    <div className="flex items-center justify-between">
-      <div>
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0 flex-1">
         <p className="text-sm text-foreground">{label}</p>
         {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
       </div>
       <motion.button
         onClick={() => onChange(!value)}
-        className={`relative h-7 w-12 rounded-full transition-colors ${value ? 'bg-accent' : 'bg-secondary'}`}
+        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${value ? 'bg-accent' : 'bg-secondary'}`}
         whileTap={{ scale: 0.95 }}
       >
         <motion.div
-          className="absolute top-0.5 h-6 w-6 rounded-full bg-primary-foreground shadow-md"
+          className="absolute top-0.5 h-6 w-6 rounded-full bg-card shadow-md"
           animate={{ left: value ? 22 : 2 }}
           transition={echosTransition}
         />
@@ -160,14 +171,14 @@ const SettingsScreen = () => {
         min={min} max={max} step={step || 1}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[hsl(var(--accent))] h-1.5"
+        className="w-full"
       />
     </div>
   );
 
   return (
-    <div className="mx-auto max-w-2xl px-5 pb-28 pt-14">
-      <motion.div {...fadeInUp} className="mb-8">
+    <div className="mx-auto max-w-2xl px-3 sm:px-5 pb-28 pt-10 sm:pt-14 scroll-smooth-container max-h-[calc(100vh-4rem)] md:max-h-none overflow-y-auto">
+      <motion.div {...fadeInUp} className="mb-6 sm:mb-8">
         <p className="text-subhead uppercase tracking-widest">Preferences</p>
         <h1 className="text-headline mt-1">Settings</h1>
       </motion.div>
@@ -187,10 +198,10 @@ const SettingsScreen = () => {
                   key={t.id}
                   {...hoverLift}
                   onClick={() => applyTheme(t.id)}
-                  className={`flex flex-col items-center gap-2 rounded-2xl py-4 transition-colors ${
+                  className={`flex flex-col items-center gap-2 rounded-2xl py-3 sm:py-4 transition-colors ${
                     settings.theme === t.id
-                      ? 'bg-foreground text-primary-foreground'
-                      : 'bg-secondary text-muted-foreground'
+                      ? 'bg-accent text-accent-foreground'
+                      : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
                   }`}
                 >
                   <t.icon className="h-5 w-5" />
@@ -243,24 +254,18 @@ const SettingsScreen = () => {
               <div className="border-t border-border pt-4">
                 <p className="text-caption uppercase tracking-widest mb-3">Sound Triggers</p>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Toggle
-                      label="Task Complete"
-                        value={settings?.soundSettings?.taskComplete ?? false}
-                      onChange={(v) => updateSoundSetting('taskComplete', v)}
-                      description="Satisfying ding when you finish a task"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <Toggle
-                        label="Focus Start"
-                        value={settings?.soundSettings?.focusStart ?? false}
-                        onChange={(v) => updateSoundSetting('focusStart', v)}
-                        description="Calming tone when session begins"
-                      />
-                    </div>
-                  </div>
+                  <Toggle
+                    label="Task Complete"
+                    value={settings?.soundSettings?.taskComplete ?? false}
+                    onChange={(v) => updateSoundSetting('taskComplete', v)}
+                    description="Satisfying ding when you finish a task"
+                  />
+                  <Toggle
+                    label="Focus Start"
+                    value={settings?.soundSettings?.focusStart ?? false}
+                    onChange={(v) => updateSoundSetting('focusStart', v)}
+                    description="Calming tone when session begins"
+                  />
                   <Toggle
                     label="Focus End"
                     value={settings?.soundSettings?.focusEnd ?? false}
@@ -291,7 +296,7 @@ const SettingsScreen = () => {
               {/* Sound preview */}
               <div className="border-t border-border pt-4">
                 <p className="text-caption uppercase tracking-widest mb-3">Preview Sounds</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {([
                     { type: 'taskComplete' as const, label: '✅ Task' },
                     { type: 'focusStart' as const, label: '🎯 Focus' },
@@ -388,8 +393,8 @@ const SettingsScreen = () => {
                   onClick={() => updateSettings({ timeFormat: f.id })}
                   className={`flex flex-col items-center gap-1 rounded-2xl py-4 transition-colors ${
                     settings?.timeFormat === f.id
-                      ? 'bg-foreground text-primary-foreground'
-                      : 'bg-secondary text-muted-foreground'
+                      ? 'bg-accent text-accent-foreground'
+                      : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
                   }`}
                 >
                   <span className="text-sm font-medium">{f.label}</span>
@@ -401,7 +406,7 @@ const SettingsScreen = () => {
         </Section>
 
         {/* ─── DANGER ZONE ─── */}
-        <motion.div layout className="glass-card p-5">
+        <motion.div layout className="glass-card p-4 sm:p-5">
           <p className="text-caption uppercase tracking-widest mb-3 text-destructive">Reset</p>
           <p className="text-xs text-muted-foreground mb-3">
             Clear all stored data and return to defaults. This cannot be undone.

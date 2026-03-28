@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import { useTheme } from '@/hooks/useTheme';
@@ -34,24 +34,13 @@ const Index = () => {
 
   useTheme();
 
-  // Handle window resize for responsive behavior
-  useEffect(() => {
-    const handleResize = () => {
-      // Force re-render on resize to handle responsive changes
-      setActiveTab(prev => prev);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   return (
     <div className="flex min-h-screen">
       {!isMobile && (
         <DesktopSidebar activeTab={activeTab} onChange={setActiveTab} />
       )}
 
-      <div className="flex-1 p-4 md:p-6">
+      <div className="flex-1 p-3 sm:p-4 md:p-6 pb-28 md:pb-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

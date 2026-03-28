@@ -3,12 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { echosTransition } from '@/lib/motion';
 import { useStore } from '@/store/useStore';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const QuickAdd = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const addTask = useStore((s) => s.addTask);
   const selectedDate = useStore((s) => s.selectedDate);
+  const isMobile = useIsMobile();
 
   const handleSubmit = () => {
     if (!title.trim()) return;
@@ -17,10 +19,7 @@ const QuickAdd = () => {
     setIsOpen(false);
   };
 
-  const isDesktop = window.innerWidth > 768;
-
-  if (isDesktop) {
-    // Desktop version - inline at top of task list
+  if (!isMobile) {
     return (
       <div className="w-full rounded-[2rem] p-5 md:p-6 shadow-sm border border-border/50 bg-card/50 backdrop-blur-md overflow-hidden">
         <AnimatePresence mode="wait">
@@ -76,11 +75,10 @@ const QuickAdd = () => {
     );
   }
 
-  // Mobile version - FAB
   return (
     <>
       <motion.button
-        className="fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full bg-foreground text-primary-foreground shadow-lg shadow-primary/25 flex items-center justify-center"
+        className="fixed bottom-24 right-6 z-30 h-14 w-14 rounded-full bg-accent text-accent-foreground shadow-lg shadow-accent/25 flex items-center justify-center"
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
       >
@@ -93,14 +91,14 @@ const QuickAdd = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end justify-center p-6"
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end justify-center p-4 sm:p-6"
             onClick={() => setIsOpen(false)}
           >
             <motion.div
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 100, opacity: 0 }}
-              className="w-full max-w-sm rounded-[2rem] p-6 shadow-sm border border-border/50 bg-card/50 backdrop-blur-md"
+              className="w-full max-w-sm glass-card p-5 sm:p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <input
@@ -123,7 +121,7 @@ const QuickAdd = () => {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="rounded-lg bg-foreground px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+                  className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:opacity-90 transition-opacity"
                 >
                   Add
                 </button>
