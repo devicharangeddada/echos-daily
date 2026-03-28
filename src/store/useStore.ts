@@ -30,18 +30,37 @@ export interface Task {
   stability?: number;
 }
 
-export type NodeStatus = 'not_started' | 'learning' | 'revising' | 'mastered';
-export type NodeType = 'subject' | 'chapter' | 'topic';
+export type NodeStatus = 'not_started' | 'learning' | 'mastered' | 'failed' | 'retrying';
+export type ActionType = 'study' | 'practice' | 'recall' | 'revision' | 'test';
+export type NodeType = 'subject' | 'chapter' | 'topic' | 'task';
 export type TaskType = 'study' | 'revision' | 'test' | 'recall';
 
-export interface SyllabusNode {
+export interface InfiniteNode {
   id: string;
   parentId: string | null;
-  type: NodeType;
   title: string;
+  type: NodeType;
+  description?: string;
+  notes?: string;
+  color?: string;
+  icon?: string;
   weightage: number;
+  mastery: number;
+  failureCount: number;
+  nextDueDate?: number;
+  lastSessionDate?: number;
+  completed: boolean;
   status: NodeStatus;
   progress: number;
+}
+
+export interface NodeAction {
+  id: string;
+  nodeId: string;
+  type: ActionType;
+  completed: boolean;
+  repeat: boolean;
+  energyLevel: 'low' | 'medium' | 'high';
 }
 
 export interface StructuredTask extends Task {
@@ -121,7 +140,9 @@ export interface Settings {
 }
 
 interface StoreState {
-  nodes: SyllabusNode[];
+  nodes: InfiniteNode[];
+  actions: NodeAction[];
+  selectedNodeId: string | null;
   tasks: StructuredTask[];
   focusSession: FocusSession;
   activeSession: ActiveSession;
@@ -135,7 +156,14 @@ interface StoreState {
   examDate: string;
   settings: Settings;
   selectedDate: string;
-  addNode: (node: Omit<SyllabusNode, 'id'>) => void;
+  addNode: (node: Partial<Omit<InfiniteNode, 'id' | 'completed' | 'progress' | 'mastery' | 'failureCount' | 'status' | 'weightage'>> & { title: string; parentId: string | null }) => void;
+  updateNode: (id: string, updates: Partial<InfiniteNode>) => void;
+  deleteNode: (id: string) => void;
+  setSelectedNodeId: (nodeId: string | null) => void;
+  recordFailure: (nodeId: string) => void;
+  recordSuccess: (nodeId: string) => void;
+  addAction: (action: Omit<NodeAction, 'id' | 'completed'>) => void;
+  resolveAction: (nodeId: string, success: boolean) => void;
   updateNodeStatus: (id: string, status: NodeStatus) => void;
   updateNodeProgress: (id: string, progress: number) => void;
   calculateAutoPriority: (nodeId: string) => number;
@@ -175,16 +203,133 @@ const defaultTasks: StructuredTask[] = [
   { id: '10', title: 'Physics lab report', time: null, date: today, dueDate: today, category: 'learning', subcategory: 'Physics', completed: false, eduType: 'homework', resourceLinks: ['https://example.com/lab-guide'], nodeId: 'topic-5', type: 'study', energyLevel: 'medium', estimatedMinutes: 60 },
 ];
 
-const defaultNodes: SyllabusNode[] = [
-  { id: 'subject-1', parentId: null, type: 'subject', title: 'Math', weightage: 9, status: 'learning', progress: 55 },
-  { id: 'chapter-1', parentId: 'subject-1', type: 'chapter', title: 'Algebra', weightage: 8, status: 'learning', progress: 45 },
-  { id: 'topic-1', parentId: 'chapter-1', type: 'topic', title: 'Linear equations', weightage: 7, status: 'learning', progress: 60 },
-  { id: 'topic-2', parentId: 'chapter-1', type: 'topic', title: 'Quadratic equations', weightage: 9, status: 'not_started', progress: 15 },
-  { id: 'chapter-2', parentId: 'subject-1', type: 'chapter', title: 'Calculus', weightage: 9, status: 'learning', progress: 35 },
-  { id: 'topic-3', parentId: 'chapter-2', type: 'topic', title: 'Derivatives', weightage: 8, status: 'learning', progress: 40 },
-  { id: 'topic-4', parentId: 'chapter-2', type: 'topic', title: 'Integrals', weightage: 7, status: 'revising', progress: 55 },
-  { id: 'chapter-3', parentId: 'subject-1', type: 'chapter', title: 'Statistics', weightage: 6, status: 'learning', progress: 25 },
-  { id: 'topic-5', parentId: 'chapter-3', type: 'topic', title: 'Probability', weightage: 8, status: 'not_started', progress: 20 },
+const defaultNodes: InfiniteNode[] = [
+  {
+    id: 'subject-1',
+    parentId: null,
+    type: 'subject',
+    title: 'Math',
+    weightage: 9,
+    mastery: 55,
+    failureCount: 0,
+    status: 'learning',
+    progress: 55,
+    color: '#3b82f6',
+    icon: '📘',
+    completed: false,
+  },
+  {
+    id: 'chapter-1',
+    parentId: 'subject-1',
+    type: 'chapter',
+    title: 'Algebra',
+    weightage: 8,
+    mastery: 45,
+    failureCount: 0,
+    status: 'learning',
+    progress: 45,
+    color: '#10b981',
+    icon: '📗',
+    completed: false,
+  },
+  {
+    id: 'topic-1',
+    parentId: 'chapter-1',
+    type: 'topic',
+    title: 'Linear equations',
+    weightage: 7,
+    mastery: 60,
+    failureCount: 0,
+    status: 'learning',
+    progress: 60,
+    color: '#f59e0b',
+    icon: '🔢',
+    completed: false,
+  },
+  {
+    id: 'topic-2',
+    parentId: 'chapter-1',
+    type: 'topic',
+    title: 'Quadratic equations',
+    weightage: 9,
+    mastery: 15,
+    failureCount: 0,
+    status: 'not_started',
+    progress: 15,
+    color: '#ef4444',
+    icon: '📐',
+    completed: false,
+  },
+  {
+    id: 'chapter-2',
+    parentId: 'subject-1',
+    type: 'chapter',
+    title: 'Calculus',
+    weightage: 9,
+    mastery: 35,
+    failureCount: 0,
+    status: 'learning',
+    progress: 35,
+    color: '#8b5cf6',
+    icon: '∫',
+    completed: false,
+  },
+  {
+    id: 'topic-3',
+    parentId: 'chapter-2',
+    type: 'topic',
+    title: 'Derivatives',
+    weightage: 8,
+    mastery: 40,
+    failureCount: 0,
+    status: 'learning',
+    progress: 40,
+    color: '#6366f1',
+    icon: '⚡',
+    completed: false,
+  },
+  {
+    id: 'topic-4',
+    parentId: 'chapter-2',
+    type: 'topic',
+    title: 'Integrals',
+    weightage: 7,
+    mastery: 55,
+    failureCount: 0,
+    status: 'learning',
+    progress: 55,
+    color: '#14b8a6',
+    icon: '∑',
+    completed: false,
+  },
+  {
+    id: 'chapter-3',
+    parentId: 'subject-1',
+    type: 'chapter',
+    title: 'Statistics',
+    weightage: 6,
+    mastery: 25,
+    failureCount: 0,
+    status: 'learning',
+    progress: 25,
+    color: '#f97316',
+    icon: '📊',
+    completed: false,
+  },
+  {
+    id: 'topic-5',
+    parentId: 'chapter-3',
+    type: 'topic',
+    title: 'Probability',
+    weightage: 8,
+    mastery: 20,
+    failureCount: 0,
+    status: 'not_started',
+    progress: 20,
+    color: '#ec4899',
+    icon: '🎲',
+    completed: false,
+  },
 ];
 
 const defaultFocusLogs: FocusLog[] = [
@@ -275,6 +420,8 @@ export const useStore = create<StoreState>()(
         compactMode: false,
       },
       selectedDate: today,
+      selectedNodeId: null,
+      actions: [],
 
       addTask: (task) =>
         set((state) => {
@@ -362,20 +509,169 @@ export const useStore = create<StoreState>()(
       setSelectedDate: (date) => set({ selectedDate: date }),
 
       addNode: (node) =>
-        set((state) => ({ nodes: [...state.nodes, { ...node, id: crypto.randomUUID() }] })),
+        set((state) => ({
+          nodes: [
+            ...state.nodes,
+            {
+              id: crypto.randomUUID(),
+              title: node.title,
+              parentId: node.parentId ?? null,
+              description: node.description ?? '',
+              notes: node.notes ?? '',
+              type: node.type ?? 'topic',
+              color: node.color ?? '#3b82f6',
+              icon: node.icon ?? '📘',
+              weightage: node.weightage ?? 5,
+              mastery: node.mastery ?? 0,
+              failureCount: node.failureCount ?? 0,
+              nextDueDate: node.nextDueDate,
+              lastSessionDate: node.lastSessionDate,
+              completed: node.completed ?? false,
+              status: node.status ?? 'not_started',
+              progress: node.progress ?? 0,
+            },
+          ],
+        })),
+
+      setSelectedNodeId: (nodeId) =>
+        set(() => ({ selectedNodeId: nodeId })),
+
+      updateNode: (id, updates) =>
+        set((state) => ({
+          nodes: state.nodes.map((node) =>
+            node.id === id ? { ...node, ...updates } : node,
+          ),
+        })),
+
+      deleteNode: (id) =>
+        set((state) => {
+          const collectTree = (nodeId: string, allNodes: InfiniteNode[]): Set<string> => {
+            const ids = new Set<string>([nodeId]);
+            for (const node of allNodes) {
+              if (node.parentId && ids.has(node.parentId)) {
+                ids.add(node.id);
+              }
+            }
+            return ids;
+          };
+
+          const pruned = collectTree(id, state.nodes);
+          return {
+            nodes: state.nodes.filter((node) => !pruned.has(node.id)),
+            actions: state.actions.filter((action) => !pruned.has(action.nodeId)),
+            selectedNodeId: pruned.has(state.selectedNodeId ?? '') ? null : state.selectedNodeId,
+          };
+        }),
+
+      addAction: (action) =>
+        set((state) => ({
+          actions: [
+            ...state.actions,
+            {
+              id: crypto.randomUUID(),
+              completed: false,
+              ...action,
+            },
+          ],
+        })),
+
+      recordFailure: (nodeId) =>
+        set((state) => {
+          const node = state.nodes.find((candidate) => candidate.id === nodeId);
+          if (!node) return state;
+
+          const nextMastery = Math.max(0, node.mastery - 12);
+          const updatedNode = {
+            ...node,
+            status: 'failed',
+            failureCount: node.failureCount + 1,
+            mastery: nextMastery,
+            nextDueDate: Date.now() + 2 * 3600000,
+            progress: nextMastery,
+          };
+
+          return {
+            nodes: state.nodes.map((current) => (current.id === nodeId ? updatedNode : current)),
+            selectedNodeId: state.selectedNodeId === nodeId ? nodeId : state.selectedNodeId,
+          };
+        }),
+
+      recordSuccess: (nodeId) =>
+        set((state) => {
+          const node = state.nodes.find((candidate) => candidate.id === nodeId);
+          if (!node) return state;
+
+          const delta = node.status === 'failed' ? 22 : 16;
+          const nextMastery = Math.min(100, node.mastery + delta);
+          const updatedNode = {
+            ...node,
+            status: nextMastery >= 90 ? 'mastered' : 'learning',
+            failureCount: Math.max(0, node.failureCount - 1),
+            mastery: nextMastery,
+            nextDueDate: Date.now() + 24 * 3600000,
+            progress: nextMastery,
+            lastSessionDate: Date.now(),
+            completed: nextMastery >= 100 ? true : node.completed,
+          };
+
+          return {
+            nodes: state.nodes.map((current) => (current.id === nodeId ? updatedNode : current)),
+            selectedNodeId: state.selectedNodeId === nodeId ? nodeId : state.selectedNodeId,
+          };
+        }),
+
+      resolveAction: (nodeId, success) =>
+        set((state) => {
+          const node = state.nodes.find((candidate) => candidate.id === nodeId);
+          if (!node) return state;
+
+          const masteryDelta = success ? 15 : -10;
+          const nextDue = Date.now() + (success ? 24 * 3600000 : 1 * 3600000);
+          const updatedNode = {
+            ...node,
+            status: success ? 'learning' : 'failed',
+            failureCount: node.failureCount + (success ? 0 : 1),
+            mastery: Math.min(100, Math.max(0, node.mastery + masteryDelta)),
+            nextDueDate: nextDue,
+            lastSessionDate: Date.now(),
+            progress: Math.min(100, Math.max(0, node.mastery + masteryDelta)),
+          };
+
+          return {
+            nodes: state.nodes.map((current) => (current.id === nodeId ? updatedNode : current)),
+            actions: state.actions.map((action) =>
+              action.nodeId === nodeId
+                ? { ...action, completed: success, repeat: !success }
+                : action,
+            ),
+            selectedNodeId: state.selectedNodeId === nodeId ? nodeId : state.selectedNodeId,
+          };
+        }),
 
       updateNodeStatus: (id, status) =>
         set((state) => ({ nodes: state.nodes.map((node) => (node.id === id ? { ...node, status } : node)) })),
 
       updateNodeProgress: (id, progress) =>
-        set((state) => ({ nodes: state.nodes.map((node) => (node.id === id ? { ...node, progress, status: progress >= 90 ? 'mastered' : node.status } : node)) })),
+        set((state) => ({
+          nodes: state.nodes.map((node) =>
+            node.id === id
+              ? {
+                  ...node,
+                  progress,
+                  mastery: Math.min(100, Math.max(0, progress)),
+                  status: progress >= 90 ? 'mastered' : node.status,
+                }
+              : node,
+          ),
+        })),
 
       calculateAutoPriority: (nodeId) => {
         const node = get().nodes.find((n) => n.id === nodeId);
         if (!node) return 0;
         const incompleteTasks = get().tasks.filter((task) => task.nodeId === nodeId && !task.completed).length;
-        const emphasis = Math.max(0, 10 - node.progress / 10);
-        return Math.round(node.weightage * emphasis + incompleteTasks * 8);
+        const urgency = Math.max(0, 100 - node.mastery) / 10;
+        const overdue = node.nextDueDate && node.nextDueDate <= Date.now() ? 1 : 0;
+        return Math.round(node.weightage * 1.3 + urgency * 8 + node.failureCount * 3 + incompleteTasks * 6 + overdue * 10);
       },
 
       reviewTask: async (taskId, quality) => {

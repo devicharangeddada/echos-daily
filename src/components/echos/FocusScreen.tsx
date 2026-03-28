@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, RotateCcw, X, ChevronDown, Check } from 'lucide-react';
 import { useStore } from '@/store/useStore';
+import { useToast } from '@/hooks/use-toast';
 import { fadeInUp, echosTransition, hoverLift } from '@/lib/motion';
 
 const WORK_DURATION = 25 * 60;
@@ -13,28 +14,40 @@ const formatTime = (s: number) => {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 };
 
+const AMBIENCE_PROFILES = [
+  { id: 'hum', label: 'Transformer Hum', freq: 60, gain: 0.015, type: 'sine' as const },
+  { id: 'zen', label: 'Deep Zen', freq: 110, gain: 0.01, type: 'sine' as const },
+  { id: 'focus', label: 'Gamma Wave', freq: 40, gain: 0.02, type: 'sine' as const },
+];
+
 const FocusScreen = () => {
+  const { toast } = useToast();
   const {
     focusSession,
-    activeSession,
     setFocusSession,
+    activeSession,
     setActiveSession,
     tasks,
+    nodes,
     addFocusLog,
     addSessionToHistory,
     toggleTask,
     settings,
     xp,
+    recordSuccess,
+    recordFailure,
   } = useStore();
 
   const [showPicker, setShowPicker] = useState(false);
-  const [hum, setHum] = useState(false);
-  const [whiteNoise, setWhiteNoise] = useState(false);
+  const [activeProfile, setActiveProfile] = useState<string | null>(null);
   const [brainDumpMode, setBrainDumpMode] = useState(false);
   const [brainDumpText, setBrainDumpText] = useState('');
-  const [brainDumpTimeLeft, setBrainDumpTimeLeft] = useState(120); // 2 minutes
+  const [brainDumpTimeLeft, setBrainDumpTimeLeft] = useState(120);
   const [brainDumpResults, setBrainDumpResults] = useState<string[]>([]);
+  const [sessionReviewed, setSessionReviewed] = useState(false);
+
   const tickRef = useRef<number | null>(null);
+  const audioRef = useRef<{ ctx: AudioContext; source: AudioBufferSourceNode | OscillatorNode; gain: GainNode } | null>(null);
   const lastTimestampRef = useRef<number>(Date.now());
 
   const { isActive, timeLeft, mode, assignedTaskId } = focusSession;
@@ -64,41 +77,32 @@ const FocusScreen = () => {
   }, [settings.sounds]);
 
   useEffect(() => {
-    if (hum) {
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = 66;
-      gain.gain.value = 0.015;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      return () => {
-        osc.stop();
-        ctx.close();
-      };
-    }
-    if (whiteNoise) {
-      const ctx = new AudioContext();
-      const bufferSize = 2 * ctx.sampleRate;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i += 1) data[i] = Math.random() * 2 - 1;
-      const noise = ctx.createBufferSource();
-      noise.buffer = buffer;
-      noise.loop = true;
-      const gain = ctx.createGain();
-      gain.gain.value = 0.025;
-      noise.connect(gain);
-      gain.connect(ctx.destination);
-      noise.start();
-      return () => {
-        noise.stop();
-        ctx.close();
-      };
-    }
+    if (!activeProfile || typeof window === 'undefined' || !window.AudioContext) return;
+    const profile = AMBIENCE_PROFILES.find((p) => p.id === activeProfile);
+    if (!profile) return;
 
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const gain = ctx.createGain();
+    gain.gain.value = profile.gain;
+    gain.connect(ctx.destination);
+
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = profile.freq;
+    osc.connect(gain);
+    osc.start();
+
+    audioRef.current = { ctx, source: osc, gain };
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.source.stop();
+        audioRef.current.ctx.close();
+        audioRef.current = null;
+      }
+    };
+  }, [activeProfile]);
+
+  useEffect(() => {
     if (!isActive) {
       if (tickRef.current !== null) {
         window.clearInterval(tickRef.current);
@@ -126,7 +130,15 @@ const FocusScreen = () => {
         tickRef.current = null;
       }
     };
-  }, [isActive, focusSession.isActive, focusSession.timeLeft, setFocusSession, setActiveSession]);
+  }, [isActive, focusSession.isActive, focusSession.timeLeft, setFocusSession, setActiveSession, focusSession]);
+
+  const reset = useCallback(() => {
+    const initial = focusSession.mode === 'work' ? WORK_DURATION : BREAK_DURATION;
+    setFocusSession({ isActive: false, timeLeft: initial });
+    setActiveSession({ isPaused: true, timeLeft: initial, startTime: null });
+    setBrainDumpMode(false);
+    setSessionReviewed(false);
+  }, [focusSession.mode, setActiveSession, setFocusSession]);
 
   useEffect(() => {
     if (timeLeft > 0 || !isActive) return;
@@ -134,8 +146,8 @@ const FocusScreen = () => {
     startChime();
 
     if (mode === 'work') {
-      // Enter Brain Dump mode instead of completing immediately
       setBrainDumpMode(true);
+      setSessionReviewed(false);
       setBrainDumpTimeLeft(120);
       setBrainDumpText('');
       setBrainDumpResults([]);
@@ -144,7 +156,6 @@ const FocusScreen = () => {
       return;
     }
 
-    // For break mode, complete normally
     addFocusLog({
       date: new Date().toISOString().split('T')[0],
       durationMinutes: BREAK_DURATION / 60,
@@ -170,43 +181,41 @@ const FocusScreen = () => {
       mode: 'work',
       startTime: null,
     });
-  }, [timeLeft, isActive, mode, assignedTask, assignedTaskId, addFocusLog, addSessionToHistory, setFocusSession, setActiveSession, toggleTask, startChime]);
-
-  // Brain Dump Timer
-  useEffect(() => {
-    if (!brainDumpMode || brainDumpTimeLeft <= 0) return;
-
-    const interval = setInterval(() => {
-      setBrainDumpTimeLeft((prev) => {
-        if (prev <= 1) {
-          // Time's up, analyze recall
-          analyzeBrainDump();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [brainDumpMode, brainDumpTimeLeft]);
+  }, [timeLeft, isActive, mode, assignedTaskId, addFocusLog, addSessionToHistory, setFocusSession, setActiveSession, startChime]);
 
   const analyzeBrainDump = useCallback(() => {
-    if (!assignedTask) return;
-
-    const originalText = (assignedTask.notes || '') + ' ' + (assignedTask.quickNotes || '');
+    const originalText = `${assignedTask?.notes || ''} ${assignedTask?.quickNotes || ''}`.toLowerCase();
     const recallText = brainDumpText.toLowerCase();
-    const originalWords = originalText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const originalWords = Array.from(new Set(originalText.split(/\W+/).filter((w) => w.length > 3)));
 
-    const missedConcepts: string[] = [];
-    originalWords.forEach(word => {
-      if (!recallText.includes(word)) {
-        missedConcepts.push(word);
+    const missedConcepts = originalWords.filter((word) => !recallText.includes(word)).slice(0, 10);
+    setBrainDumpResults(missedConcepts);
+    return missedConcepts;
+  }, [assignedTask?.notes, assignedTask?.quickNotes, brainDumpText]);
+
+  useEffect(() => {
+    if (!brainDumpMode || brainDumpTimeLeft > 0) return;
+    if (sessionReviewed) return;
+
+    const missedConcepts = analyzeBrainDump();
+    const goal = assignedTask ? assignedTask.title : 'your focus session';
+
+    if (assignedTask && assignedTask.nodeId) {
+      if (missedConcepts.length > 4) {
+        recordFailure(assignedTask.nodeId);
+        toast({ title: 'Marked for review', description: `"${goal}" was flagged as difficult and will resurface sooner.` });
+      } else {
+        recordSuccess(assignedTask.nodeId);
+        toast({ title: 'Solid session', description: `"${goal}" was reinforced and scheduled for later.` });
       }
-    });
+    } else {
+      toast({ title: 'Session complete', description: 'No linked node found to update mastery.' });
+    }
 
-    setBrainDumpResults(missedConcepts.slice(0, 10)); // Top 10 missed
+    if (assignedTask && !assignedTask.completed) {
+      toggleTask(assignedTask.id);
+    }
 
-    // Complete the session after analysis
     addFocusLog({
       date: new Date().toISOString().split('T')[0],
       durationMinutes: WORK_DURATION / 60,
@@ -220,35 +229,25 @@ const FocusScreen = () => {
       completed: true,
     });
 
-    if (assignedTask && !assignedTask.completed) {
-      toggleTask(assignedTask.id);
-    }
-
+    setSessionReviewed(true);
     setFocusSession({
       isActive: false,
       timeLeft: BREAK_DURATION,
       mode: 'break',
     });
-
     setActiveSession({
       isPaused: true,
       timeLeft: BREAK_DURATION,
       mode: 'break',
       startTime: null,
     });
-
-    // Exit brain dump mode after a delay
-    setTimeout(() => {
-      setBrainDumpMode(false);
-    }, 5000);
-  }, [assignedTask, brainDumpText, addFocusLog, addSessionToHistory, setFocusSession, setActiveSession, toggleTask, assignedTaskId]);
+  }, [brainDumpMode, brainDumpTimeLeft, analyzeBrainDump, assignedTask, assignedTaskId, recordFailure, recordSuccess, setFocusSession, setActiveSession, addFocusLog, addSessionToHistory, toggleTask, toast, sessionReviewed]);
 
   const toggle = useCallback(() => {
     if (!focusSession.isActive) {
-      const now = Date.now();
       setActiveSession({
         taskId: assignedTaskId,
-        startTime: now,
+        startTime: Date.now(),
         isPaused: false,
         timeLeft: focusSession.timeLeft || WORK_DURATION,
         mode: focusSession.mode,
@@ -258,13 +257,7 @@ const FocusScreen = () => {
       setFocusSession({ isActive: false });
       setActiveSession({ isPaused: true, startTime: null });
     }
-  }, [focusSession.isActive, focusSession.timeLeft, focusSession.mode, setActiveSession, setFocusSession, assignedTaskId]);
-
-  const reset = useCallback(() => {
-    const initial = focusSession.mode === 'work' ? WORK_DURATION : BREAK_DURATION;
-    setFocusSession({ isActive: false, timeLeft: initial });
-    setActiveSession({ isPaused: true, timeLeft: initial, startTime: null });
-  }, [focusSession.mode, setActiveSession, setFocusSession]);
+  }, [focusSession.isActive, focusSession.timeLeft, focusSession.mode, assignedTaskId, setActiveSession, setFocusSession]);
 
   const progress = focusSession.mode === 'work'
     ? 1 - focusSession.timeLeft / WORK_DURATION
@@ -276,11 +269,8 @@ const FocusScreen = () => {
     background: `radial-gradient(circle at 50% 20%, hsla(${cosmicHue}, 100%, 65%, 0.22), transparent 50%), radial-gradient(circle at 70% 80%, hsla(${cosmicHue + 40}, 100%, 45%, 0.14), transparent 40%)`,
   };
 
-  const circumference = 2 * Math.PI * 120;
-
   return (
     <>
-      {/* Zen Mode Overlay */}
       <AnimatePresence>
         {isActive && (
           <motion.div
@@ -289,30 +279,24 @@ const FocusScreen = () => {
             exit={{ opacity: 0, transition: { duration: 0.3 } }}
             className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
           >
-            {/* Breathing background */}
-            <motion.div
-              className="absolute inset-0 bg-background"
-              animate={{ scale: [1, 1.02, 1] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            />
-
+            <motion.div className="absolute inset-0 bg-background" animate={{ scale: [1, 1.02, 1] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }} />
             <div className="relative z-10 flex flex-col items-center">
-              {/* Mode label */}
               <motion.p {...fadeInUp} className="text-caption mb-8 uppercase tracking-[0.3em]">
                 {mode === 'work' ? 'Deep Focus' : 'Break Time'}
               </motion.p>
-
-              {/* Ring + Timer */}
               <motion.div {...fadeInUp} className="relative mb-10">
                 <svg width="280" height="280" className="rotate-[-90deg]">
                   <circle cx="140" cy="140" r="120" fill="none" stroke="hsl(var(--border))" strokeWidth="2" />
                   <motion.circle
-                    cx="140" cy="140" r="120" fill="none"
+                    cx="140"
+                    cy="140"
+                    r="120"
+                    fill="none"
                     stroke="hsl(var(--foreground))"
                     strokeWidth="2"
                     strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    animate={{ strokeDashoffset: circumference * (1 - progress) }}
+                    strokeDasharray={2 * Math.PI * 120}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 120 * (1 - progress) }}
                     transition={echosTransition}
                   />
                 </svg>
@@ -327,8 +311,6 @@ const FocusScreen = () => {
                   )}
                 </div>
               </motion.div>
-
-              {/* Controls */}
               <div className="flex items-center gap-6">
                 <motion.button {...hoverLift} onClick={reset} className="rounded-full p-3 text-muted-foreground hover:text-foreground transition-colors">
                   <RotateCcw className="h-5 w-5" />
@@ -340,8 +322,7 @@ const FocusScreen = () => {
                 >
                   <Pause className="h-6 w-6" />
                 </motion.button>
-                <motion.button {...hoverLift} onClick={() => { reset(); setFocusSession({ isActive: false }); }}
-                  className="rounded-full p-3 text-muted-foreground hover:text-foreground transition-colors">
+                <motion.button {...hoverLift} onClick={() => { reset(); setFocusSession({ isActive: false }); }} className="rounded-full p-3 text-muted-foreground hover:text-foreground transition-colors">
                   <X className="h-5 w-5" />
                 </motion.button>
               </div>
@@ -350,7 +331,6 @@ const FocusScreen = () => {
         )}
       </AnimatePresence>
 
-      {/* Brain Dump Overlay */}
       <AnimatePresence>
         {brainDumpMode && (
           <motion.div
@@ -370,7 +350,6 @@ const FocusScreen = () => {
                   {formatTime(brainDumpTimeLeft)}
                 </p>
               </motion.div>
-
               <motion.textarea
                 {...fadeInUp}
                 value={brainDumpText}
@@ -379,7 +358,6 @@ const FocusScreen = () => {
                 className="w-full h-64 p-4 glass-card resize-none focus:outline-none focus:ring-2 focus:ring-accent"
                 autoFocus
               />
-
               {brainDumpTimeLeft === 0 && brainDumpResults.length > 0 && (
                 <motion.div {...fadeInUp} className="mt-6 p-4 glass-card">
                   <p className="text-caption uppercase tracking-widest mb-2">Key Concepts Missed</p>
@@ -392,7 +370,6 @@ const FocusScreen = () => {
                   </div>
                 </motion.div>
               )}
-
               {brainDumpTimeLeft === 0 && (
                 <motion.button
                   {...hoverLift}
@@ -408,7 +385,6 @@ const FocusScreen = () => {
         )}
       </AnimatePresence>
 
-      {/* Non-zen UI */}
       <div className="mx-auto max-w-2xl px-5 pb-28 pt-14" style={cosmicStyle}>
         <motion.div {...fadeInUp} className="mb-8">
           <p className="text-subhead uppercase tracking-widest">Deep Work</p>
@@ -416,19 +392,21 @@ const FocusScreen = () => {
           <p className="text-xs text-muted-foreground mt-1">Deep Work Level: {deepWorkLevel} / 8</p>
         </motion.div>
 
-        {/* Timer card */}
         <motion.div {...fadeInUp} className="glass-card p-8 flex flex-col items-center mb-6">
           <p className="text-caption uppercase tracking-[0.2em] mb-6">
             {mode === 'work' ? '25 min session' : '5 min break'}
           </p>
-
           <div className="relative mb-8">
             <svg width="200" height="200" className="rotate-[-90deg]">
               <circle cx="100" cy="100" r="85" fill="none" stroke="hsl(var(--border))" strokeWidth="2" />
               <motion.circle
-                cx="100" cy="100" r="85" fill="none"
+                cx="100"
+                cy="100"
+                r="85"
+                fill="none"
                 stroke="hsl(var(--foreground))"
-                strokeWidth="2" strokeLinecap="round"
+                strokeWidth="2"
+                strokeLinecap="round"
                 strokeDasharray={2 * Math.PI * 85}
                 animate={{ strokeDashoffset: 2 * Math.PI * 85 * (1 - progress) }}
                 transition={echosTransition}
@@ -440,7 +418,6 @@ const FocusScreen = () => {
               </span>
             </div>
           </div>
-
           <div className="flex items-center gap-4">
             <motion.button {...hoverLift} onClick={reset} className="rounded-full p-3 text-muted-foreground hover:text-foreground transition-colors">
               <RotateCcw className="h-5 w-5" />
@@ -450,30 +427,39 @@ const FocusScreen = () => {
               onClick={toggle}
               className="flex h-14 w-14 items-center justify-center rounded-full bg-foreground text-primary-foreground"
             >
-              {isActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+              {isActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
             </motion.button>
           </div>
         </motion.div>
 
         <motion.div {...fadeInUp} className="glass-card p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">Audio Ambience</span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setHum((v) => !v)}
-                className={`rounded-full px-3 py-1 text-xs ${hum ? 'bg-accent text-accent-foreground' : 'bg-secondary text-foreground'}`}
-              >Transformer Hum</button>
-              <button
-                onClick={() => setWhiteNoise((v) => !v)}
-                className={`rounded-full px-3 py-1 text-xs ${whiteNoise ? 'bg-accent text-accent-foreground' : 'bg-secondary text-foreground'}`}
-              >White Noise</button>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Audio Ambience</p>
+              <p className="text-sm text-foreground mt-1">Pleasant focus profiles for work and calm.</p>
             </div>
+            <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">{activeProfile ? AMBIENCE_PROFILES.find((p) => p.id === activeProfile)?.label : 'Off'}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {AMBIENCE_PROFILES.map((profile) => (
+              <button
+                key={profile.id}
+                type="button"
+                onClick={() => setActiveProfile(profile.id === activeProfile ? null : profile.id)}
+                className={`rounded-2xl py-3 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                  activeProfile === profile.id ? 'bg-primary text-background' : 'apple-glass hover:bg-primary/10'
+                }`}
+              >
+                {profile.label}
+              </button>
+            ))}
           </div>
         </motion.div>
 
         <motion.div {...fadeInUp} className="glass-card overflow-hidden">
           <button
-            onClick={() => setShowPicker(!showPicker)}
+            type="button"
+            onClick={() => setShowPicker((current) => !current)}
             className="flex w-full items-center justify-between px-5 py-4"
           >
             <div>
@@ -498,6 +484,7 @@ const FocusScreen = () => {
                 <div className="max-h-48 overflow-y-auto p-2">
                   {assignedTaskId && (
                     <button
+                      type="button"
                       onClick={() => { setFocusSession({ assignedTaskId: null }); setShowPicker(false); }}
                       className="w-full rounded-xl px-4 py-3 text-left text-sm text-destructive hover:bg-secondary transition-colors"
                     >
@@ -507,6 +494,7 @@ const FocusScreen = () => {
                   {incompleteTasks.map((t) => (
                     <button
                       key={t.id}
+                      type="button"
                       onClick={() => { setFocusSession({ assignedTaskId: t.id }); setShowPicker(false); }}
                       className={`w-full rounded-xl px-4 py-3 text-left text-sm hover:bg-secondary transition-colors ${
                         t.id === assignedTaskId ? 'bg-secondary font-medium' : 'text-foreground'
