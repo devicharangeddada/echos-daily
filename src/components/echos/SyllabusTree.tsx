@@ -1,99 +1,56 @@
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronRight, ChevronDown, Plus } from 'lucide-react';
 import { useStore, InfiniteNode } from '@/store/useStore';
-import NodeInspector from './NodeInspector';
+import { ChevronRight, ChevronDown, Plus, MoreHorizontal } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const getChildType = (parentType: InfiniteNode['type']) => {
-  if (parentType === 'subject') return 'chapter';
-  if (parentType === 'chapter') return 'topic';
-  if (parentType === 'topic') return 'task';
-  return 'topic';
-};
-
-const TreeNode = ({ node, depth = 0 }: { node: InfiniteNode; depth: number }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const NodeItem = ({ node, depth = 0 }: { node: InfiniteNode; depth: number }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const { nodes, addNode, setSelectedNodeId } = useStore();
-
   const children = nodes.filter((n) => n.parentId === node.id);
-  const mastery = Math.round(node.mastery ?? node.progress ?? 0);
 
   return (
-    <div className="w-full">
+    <div className="mb-1">
       <div
-        className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-foreground/5 transition-all cursor-pointer apple-glass mb-1"
-        style={{ marginLeft: `${depth * 1.2}rem` }}
+        className="group apple-glass flex items-center gap-3 p-3 rounded-2xl hover:bg-foreground/5 transition-all cursor-pointer"
+        style={{ marginLeft: `${depth * 1.5}rem` }}
         onClick={() => setSelectedNodeId(node.id)}
       >
         <button
           type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            setIsExpanded((current) => !current);
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
           }}
           className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-secondary transition-colors"
         >
-          {children.length > 0 ? (
-            isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
-          ) : (
-            <div className="h-4 w-4" />
-          )}
+          {children.length > 0 ? (isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />) : <div className="w-4" />}
         </button>
-
-        <div className="flex-1 flex items-center justify-between min-w-0 gap-4">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{node.title}</p>
-            <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground mt-1">
-              {node.status.replace('_', ' ')}
-            </p>
-          </div>
-
-          <div className="relative h-6 w-6">
-            <svg viewBox="0 0 24 24" className="h-6 w-6">
-              <circle cx="12" cy="12" r="10" className="stroke-border fill-transparent" strokeWidth="2" />
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                className="stroke-primary fill-transparent"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeDasharray={Math.PI * 2 * 10}
-                strokeDashoffset={Math.PI * 2 * 10 * (1 - mastery / 100)}
-                style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
-              />
-            </svg>
-          </div>
+        <span className="flex-1 text-sm font-semibold">{node.title}</span>
+        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsAdding(true);
+            }}
+            className="p-1 hover:bg-primary/20 rounded-lg"
+          >
+            <Plus size={14} className="text-primary" />
+          </button>
+          <MoreHorizontal size={14} className="text-muted-foreground" />
         </div>
-
-        <button
-          type="button"
-          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary/10 rounded-full transition-all"
-          onClick={(event) => {
-            event.stopPropagation();
-            setIsAdding(true);
-          }}
-        >
-          <Plus size={14} className="text-primary" />
-        </button>
       </div>
 
       {isAdding && (
-        <div className="ml-10 mb-2">
+        <div className="ml-8 mt-2 mb-2">
           <input
             autoFocus
-            className="w-full bg-transparent border-b border-primary px-2 py-1 text-sm outline-none"
-            placeholder="Name your section..."
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                const value = event.currentTarget.value.trim();
-                if (value) {
-                  addNode({ title: value, parentId: node.id, type: getChildType(node.type) });
-                }
-                setIsAdding(false);
-              }
-              if (event.key === 'Escape') {
+            className="bg-transparent border-b border-primary text-sm w-full outline-none"
+            placeholder="Name this section..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                addNode({ title: e.currentTarget.value, parentId: node.id });
                 setIsAdding(false);
               }
             }}
@@ -101,18 +58,19 @@ const TreeNode = ({ node, depth = 0 }: { node: InfiniteNode; depth: number }) =>
         </div>
       )}
 
-      <AnimatePresence mode="popLayout">
-        {isExpanded && children.map((child) => (
+      <AnimatePresence>
+        {isOpen && (
           <motion.div
-            key={child.id}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <TreeNode node={child} depth={depth + 1} />
+            {children.map((child) => (
+              <NodeItem key={child.id} node={child} depth={depth + 1} />
+            ))}
           </motion.div>
-        ))}
+        )}
       </AnimatePresence>
     </div>
   );
@@ -163,11 +121,9 @@ export default function SyllabusTree() {
 
       <div className="space-y-2">
         {rootNodes.map((node) => (
-          <TreeNode key={node.id} node={node} depth={0} />
+          <NodeItem key={node.id} node={node} depth={0} />
         ))}
       </div>
-
-      <NodeInspector />
     </div>
   );
 }

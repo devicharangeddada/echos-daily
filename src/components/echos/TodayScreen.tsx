@@ -1,103 +1,61 @@
 import { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useStore } from '@/store/useStore';
-import { Flame, Zap, Target, Clock } from 'lucide-react';
+import { Flame, Zap, Target, Clock, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { fadeInUp } from '@/lib/motion';
 
 export default function TodayScreen() {
-  const { tasks, streak, level, xp, weeklyStats } = useStore();
+  const { nodes, streak, level, xp } = useStore();
 
-  const highEnergyTasks = useMemo(
-    () => tasks.filter((t) => !t.completed && t.energyLevel === 'high'),
-    [tasks],
+  const priorityNodes = useMemo(() => {
+    return [...nodes]
+      .filter((n) => n.status === 'failed' || n.weightage > 7)
+      .sort((a, b) => b.failureCount * b.weightage - a.failureCount * a.weightage)
+      .slice(0, 5);
+  }, [nodes]);
+
+  return (
+    <div className="space-y-8 pb-32">
+      <header className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="apple-glass p-6 rounded-[2.5rem] flex flex-col items-center">
+          <Flame className="text-orange-500 mb-2" />
+          <span className="text-2xl font-bold">{streak}</span>
+          <p className="text-[10px] uppercase font-bold opacity-40">Streak</p>
+        </div>
+        <div className="apple-glass p-6 rounded-[2.5rem] flex flex-col items-center">
+          <Zap className="text-emerald-500 mb-2" />
+          <span className="text-2xl font-bold">{xp}</span>
+          <p className="text-[10px] uppercase font-bold opacity-40">XP</p>
+        </div>
+        <div className="apple-glass p-6 rounded-[2.5rem] flex flex-col items-center">
+          <Target className="text-sky-500 mb-2" />
+          <span className="text-2xl font-bold">{level}</span>
+          <p className="text-[10px] uppercase font-bold opacity-40">Level</p>
+        </div>
+        <div className="apple-glass p-6 rounded-[2.5rem] flex flex-col items-center">
+          <Clock className="text-violet-500 mb-2" />
+          <span className="text-2xl font-bold">{priorityNodes.length}</span>
+          <p className="text-[10px] uppercase font-bold opacity-40">Priority Hits</p>
+        </div>
+      </header>
+
+      <motion.section {...fadeInUp} className="space-y-4">
+        <h2 className="text-xl font-bold px-2">System Flow: Weakness Resolution</h2>
+        <div className="space-y-3">
+          {priorityNodes.map((node) => (
+            <div key={node.id} className="apple-glass p-5 rounded-[2.5rem] flex items-center justify-between border-red-500/20 bg-red-500/5">
+              <div className="flex items-center gap-4">
+                <AlertCircle className="text-red-500" />
+                <div>
+                  <h3 className="font-semibold">{node.title}</h3>
+                  <p className="text-[10px] text-muted-foreground uppercase">Failed {node.failureCount} times</p>
+                </div>
+              </div>
+              <button className="px-4 py-2 bg-foreground text-background rounded-full text-xs font-bold">Retry Focus</button>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+    </div>
   );
-
-  const guidance = useMemo(() => {
-    if (highEnergyTasks.length > 0) return 'High energy detected. Focus on these complex topics first.';
-    return 'No high energy work is queued. Review your syllabus or close low-priority loops.';
-  }, [highEnergyTasks]);
-
-  return (
-    <div className="space-y-8 pb-32">
-      {/* Premium Bento Stats Header */}
-      <motion.header {...fadeInUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="apple-glass p-6import { useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { useStore } frot-import { motion } from 'framer-  import { useStore } from '@/store/useSstimport { Flame, Zap, Target, Clock } frot-[10import { fadeInUp } from '@/lib/motion';
-
-export defaultnt
-export default function TodayScre       <  const { tasks, streak, level, xunded-[
-  const highEnergyTasks = useMemo(
-    () => tasks.filter((t)y/5    () => tasks.filter((t) =>text-p    [tasks],
-  );
-
-  const guidance = useMemo(() => {
-    if (highEnergl}</span>
-          <    if (highEnergyTasks.lengtrcase     return 'No high energy work is queued. Review your syllabus or close low-priority loops.';
-  }, [hile  }, [highEnergyTasks]);
-
-  return (
-    <div className="space-y-8 pb-32">
-      {/* Premium cl
-  return (
-    <div cl00 h-6 w-6" />      {/* Premium Bento Stats Header f      <motion.header {...fadeInUp} classN        <div className="apple-glass p-6import { useMemo } from 'react';
-import { motXPimport { motion } from 'framer-motion';
-import { useStore } frot-impor.5import { useStore } frot-imporr gap-3 te
-export defaultnt
-export default function TodayScre       <  const { tasks, streak, level, xunded-[
-  const highEnergyTasks = useMemo(
-    () => tasks.filter((t)y/5    () => tasks.fiuppexport default -[  const highEnergyTasks = useMemo(
-    () => tasks.filter((t)y/5    () => tasks.mo    () => tasks.filter((t)y/5    :   );
-
-  const guidance = useMemo(() => {
-    if (highEnergl}</spaname="space-y-4">
-    if (highEnergl}</span>
-2">
-              <    if (highEn-l  }, [hile  }, [highEnergyTasks]);
-
-  return (
-    <div className="space-y-8 pb-32">
-      {/* Premium cl
-  return (
-    <div cl00 h-6 w-6" c
-  return (
-    <div className="shighEnergyTask      {/* Premium cl
-  return (
-    rg  return (
-    <div>            import { motXPimport { motion } from 'framer-motion';
-import { useStore } frot-impor.5import { useStore } frot-imporr gap-3 te
-export defaultnt
-export default function TodaySgrimport { useStore } frot-impor.5import { useStore }   export defaultnt
-export default function TodayScre       <  const { tasexexport default p-  const highEnergyTasks = useMemo(
-    () => tasks.filter((t)y/5    () => tasks. r    () => tasks.filter((t)y/5    ma    () => tasks.filter((t)y/5    () => tasks.mo    () => tasks.filter((t)y/5    :   );
-
-  const guissN
-  const guidance = useMemo(() => {
-    if (highEnergl}</spaname="space-y-4">
-    i   <h    if (highEnergl}</spanameext-bas    if (highEnergl}</span>
-2">
-          <2">
-              <   ex flex-w
-  return (
-    <div className="space-y-8 pb-32">
-      {/* Premeground font-b      {/* Premium cl
-  return (
-n clas  return (
-    <div b   econdary  return (
-    <div claground">{task  return (
-    rg  return (
-    <div>            ie="rounded-full bg-secondary/20 pximport { useStore } frot-impor.5import { useStore } frot-imporr gap-3 te
-  export defaultnt
-export default function TodaySgrimport { useStor           <button classNexport default function TodayScre       <  const { tasexexport default p-  const highEnergyTasks = uund    () => tasks.filter((t)y/5    () => tasks. r    () => tasks.filter((t)y/5    ma    () => tasks.filter((  
-  const guissN
-  const guidance = useMemo(() => {
-    if (highEnergl}</spaname="space-y-4">
-    i   <h    if (highEnergl}</spanameext-bas    if (highEnergl}</span>
-2"der-border">
-         if (highEnergl}</spaname="spao     i   <h    if (highEnergl}</spanameexen2">
-          <2">
-              <   ex flex-w
-  return (
-    <div cla </div             io  return (
-    <div cl  );
 }
