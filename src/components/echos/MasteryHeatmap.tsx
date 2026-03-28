@@ -7,20 +7,18 @@ type MasteryHeatmapProps = {
 };
 
 const getColor = (mastery: number) => {
-  if (mastery <= 20) return 'bg-blue-500/20 border-blue-500/30';
+  if (mastery <= 20) return 'bg-accent/20 border-accent/30';
   if (mastery <= 70) return 'bg-emerald-500/40 border-emerald-500/50';
-  return 'bg-orange-500 border-orange-500/60';
+  return 'bg-orange-500/60 border-orange-500/70';
 };
 
 const getNextReviewDate = (topic: { id: string; name: string }) => {
-  // This would come from the review data - for now return a placeholder
   return new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleDateString();
 };
 
 const MasteryHeatmap = ({ subjects }: MasteryHeatmapProps) => {
   const [hoveredTopic, setHoveredTopic] = useState<{ name: string; mastery: number; nextReview: string } | null>(null);
 
-  // Flatten all topics into a single array for the grid
   const allTopics = subjects.flatMap(subject =>
     subject.chapters.flatMap(chapter =>
       chapter.topics.map(topic => ({
@@ -38,19 +36,19 @@ const MasteryHeatmap = ({ subjects }: MasteryHeatmapProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-secondary p-4">
+      <div className="rounded-xl border border-border bg-secondary/50 p-4">
         <p className="text-caption uppercase tracking-widest">Syllabus Map</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Average mastery: <strong>{averageMastery}%</strong> across {totalTopics} topics
+          Average mastery: <strong className="text-foreground">{averageMastery}%</strong> across {totalTopics} topics
         </p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-          <span className="rounded-md bg-blue-500/20 px-2 py-1 text-blue-700 border border-blue-500/30">0–20% Cold</span>
-          <span className="rounded-md bg-emerald-500/40 px-2 py-1 text-emerald-700 border border-emerald-500/50">21–70% Neutral</span>
-          <span className="rounded-md bg-orange-500 px-2 py-1 text-orange-800 border border-orange-500/60">71–100% Hot</span>
+          <span className="rounded-md bg-accent/20 px-2 py-1 text-accent-foreground border border-accent/30">0–20% Cold</span>
+          <span className="rounded-md bg-emerald-500/40 px-2 py-1 text-foreground border border-emerald-500/50">21–70% Neutral</span>
+          <span className="rounded-md bg-orange-500/60 px-2 py-1 text-foreground border border-orange-500/70">71–100% Hot</span>
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-background p-4">
+      <div className="rounded-xl border border-border bg-card p-4">
         <div className="grid grid-cols-8 gap-1">
           {allTopics.map((topic, index) => (
             <motion.div
@@ -76,7 +74,7 @@ const MasteryHeatmap = ({ subjects }: MasteryHeatmapProps) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <p className="font-medium text-sm">{hoveredTopic.name}</p>
+            <p className="font-medium text-sm text-foreground">{hoveredTopic.name}</p>
             <p className="text-xs text-muted-foreground">
               Mastery: {hoveredTopic.mastery}% • Next review: {hoveredTopic.nextReview}
             </p>

@@ -47,41 +47,41 @@
   }
 
   .dark {
-    --background: 228 12% 8%;
+    --background: 228 12% 7%;
     --foreground: 210 20% 92%;
 
-    --card: 229 12% 12%;
+    --card: 229 12% 11%;
     --card-foreground: 210 20% 92%;
 
-    --popover: 229 12% 14%;
+    --popover: 229 12% 13%;
     --popover-foreground: 210 20% 92%;
 
     --primary: 208 88% 63%;
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 228 12% 7%;
 
-    --secondary: 225 14% 18%;
+    --secondary: 225 14% 16%;
     --secondary-foreground: 210 20% 85%;
 
-    --muted: 225 14% 15%;
+    --muted: 225 14% 14%;
     --muted-foreground: 210 14% 54%;
 
     --accent: 208 88% 63%;
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 228 12% 7%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 225 14% 20%;
-    --input: 225 14% 20%;
+    --border: 225 14% 18%;
+    --input: 225 14% 18%;
     --ring: 208 88% 63%;
 
-    --sidebar-background: 228 12% 10%;
+    --sidebar-background: 228 12% 9%;
     --sidebar-foreground: 210 20% 85%;
     --sidebar-primary: 208 88% 63%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 225 14% 18%;
+    --sidebar-primary-foreground: 228 12% 7%;
+    --sidebar-accent: 225 14% 16%;
     --sidebar-accent-foreground: 210 20% 92%;
-    --sidebar-border: 225 14% 20%;
+    --sidebar-border: 225 14% 18%;
     --sidebar-ring: 208 88% 63%;
   }
 
@@ -120,6 +120,96 @@
     @apply bg-card/80 border-border;
     box-shadow: 0 4px 20px rgba(0,0,0,0.06);
   }
+
+  /* ── Form element dark mode overrides ── */
+  input,
+  textarea,
+  select {
+    color-scheme: light;
+  }
+
+  .dark input,
+  .dark textarea,
+  .dark select {
+    color-scheme: dark;
+  }
+
+  /* Fix native date/time picker in dark mode */
+  .dark input[type="date"],
+  .dark input[type="time"],
+  .dark input[type="datetime-local"] {
+    background-color: hsl(var(--secondary));
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--border));
+  }
+
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+
+  /* Range input styling */
+  input[type="range"] {
+    @apply appearance-none bg-transparent cursor-pointer;
+    height: 6px;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: hsl(var(--secondary));
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    @apply appearance-none;
+    height: 18px;
+    width: 18px;
+    border-radius: 9999px;
+    background: hsl(var(--accent));
+    margin-top: -6px;
+    border: 2px solid hsl(var(--background));
+    box-shadow: 0 1px 4px hsl(var(--foreground) / 0.15);
+  }
+
+  input[type="range"]::-moz-range-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: hsl(var(--secondary));
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    height: 18px;
+    width: 18px;
+    border-radius: 9999px;
+    background: hsl(var(--accent));
+    border: 2px solid hsl(var(--background));
+  }
+
+  /* Selection highlight */
+  ::selection {
+    background: hsl(var(--accent) / 0.3);
+    color: hsl(var(--foreground));
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
 }
 
 @layer utilities {
@@ -134,13 +224,22 @@
 
   .text-headline {
     @apply text-2xl font-semibold tracking-tight text-foreground;
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
   }
 
   .text-subhead {
     @apply text-sm font-medium text-muted-foreground;
+    font-size: clamp(0.75rem, 2vw, 0.875rem);
   }
 
   .text-caption {
     @apply text-xs font-medium text-muted-foreground;
+  }
+
+  /* Smooth scroll container */
+  .scroll-smooth-container {
+    @apply overflow-y-auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
   }
 }
