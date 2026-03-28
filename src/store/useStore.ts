@@ -17,6 +17,7 @@ export interface Task {
   title: string;
   time: string | null;
   date: string | null;
+  dueDate?: string | null;
   category: 'work' | 'personal' | 'health' | 'learning' | 'education';
   subcategory: string;
   subCategory?: 'study' | 'homework';
@@ -27,6 +28,28 @@ export interface Task {
   quickNotes?: string;
   notes?: string;
   stability?: number;
+}
+
+export type NodeStatus = 'not_started' | 'learning' | 'revising' | 'mastered';
+export type NodeType = 'subject' | 'chapter' | 'topic';
+export type TaskType = 'study' | 'revision' | 'test' | 'recall';
+
+export interface SyllabusNode {
+  id: string;
+  parentId: string | null;
+  type: NodeType;
+  title: string;
+  weightage: number;
+  status: NodeStatus;
+  progress: number;
+}
+
+export interface StructuredTask extends Task {
+  nodeId: string;
+  type: TaskType;
+  energyLevel: 'low' | 'medium' | 'high';
+  estimatedMinutes: number;
+  dueDate: string | null;
 }
 
 export interface FocusSession {
@@ -98,7 +121,8 @@ export interface Settings {
 }
 
 interface StoreState {
-  tasks: Task[];
+  nodes: SyllabusNode[];
+  tasks: StructuredTask[];
   focusSession: FocusSession;
   activeSession: ActiveSession;
   focusLogs: FocusLog[];
@@ -111,10 +135,14 @@ interface StoreState {
   examDate: string;
   settings: Settings;
   selectedDate: string;
-  addTask: (task: Omit<Task, 'id' | 'completed'>) => void;
+  addNode: (node: Omit<SyllabusNode, 'id'>) => void;
+  updateNodeStatus: (id: string, status: NodeStatus) => void;
+  updateNodeProgress: (id: string, progress: number) => void;
+  calculateAutoPriority: (nodeId: string) => number;
+  addTask: (task: Omit<StructuredTask, 'id' | 'completed'>) => void;
   toggleTask: (id: string) => void;
   removeTask: (id: string) => void;
-  updateTask: (id: string, updates: Partial<Task>) => void;
+  updateTask: (id: string, updates: Partial<StructuredTask>) => void;
   setFocusSession: (session: Partial<FocusSession>) => void;
   setActiveSession: (session: Partial<ActiveSession>) => void;
   addFocusLog: (log: Omit<FocusLog, 'id'>) => void;
@@ -134,17 +162,29 @@ interface StoreState {
 const toDateStr = (d: Date) => d.toISOString().split('T')[0];
 const today = toDateStr(new Date());
 
-const defaultTasks: Task[] = [
-  { id: '1', title: 'Morning meditation', time: '07:00', date: today, category: 'health', subcategory: 'Mindfulness', completed: false },
-  { id: '2', title: 'Review sprint backlog', time: '09:00', date: today, category: 'work', subcategory: 'Planning', completed: false },
-  { id: '3', title: 'Deep work — feature build', time: '10:00', date: today, category: 'work', subcategory: 'Engineering', completed: false },
-  { id: '4', title: 'Lunch break & walk', time: '12:30', date: today, category: 'health', subcategory: 'Recovery', completed: false },
-  { id: '5', title: 'Design review sync', time: '14:00', date: today, category: 'work', subcategory: 'Meetings', completed: false },
-  { id: '6', title: 'Read 30 pages', time: '18:00', date: today, category: 'learning', subcategory: 'Reading', completed: false, eduType: 'study', resourceLinks: ['https://example.com/book'], quickNotes: 'Chapter 4-6' },
-  { id: '7', title: 'Evening workout', time: '19:00', date: today, category: 'health', subcategory: 'Fitness', completed: false },
-  { id: '8', title: 'Journal & reflect', time: null, date: today, category: 'personal', subcategory: 'Reflection', completed: false },
-  { id: '9', title: 'Math homework Ch.5', time: '16:00', date: today, category: 'learning', subcategory: 'Mathematics', completed: false, eduType: 'homework', quickNotes: 'Problems 1-20' },
-  { id: '10', title: 'Physics lab report', time: null, date: today, category: 'learning', subcategory: 'Physics', completed: false, eduType: 'homework', resourceLinks: ['https://example.com/lab-guide'] },
+const defaultTasks: StructuredTask[] = [
+  { id: '1', title: 'Morning meditation', time: '07:00', date: today, dueDate: today, category: 'health', subcategory: 'Mindfulness', completed: false, nodeId: 'subject-1', type: 'study', energyLevel: 'low', estimatedMinutes: 15 },
+  { id: '2', title: 'Review sprint backlog', time: '09:00', date: today, dueDate: today, category: 'work', subcategory: 'Planning', completed: false, nodeId: 'chapter-1', type: 'revision', energyLevel: 'medium', estimatedMinutes: 25 },
+  { id: '3', title: 'Deep work — feature build', time: '10:00', date: today, dueDate: today, category: 'work', subcategory: 'Engineering', completed: false, nodeId: 'topic-3', type: 'study', energyLevel: 'high', estimatedMinutes: 90 },
+  { id: '4', title: 'Lunch break & walk', time: '12:30', date: today, dueDate: today, category: 'health', subcategory: 'Recovery', completed: false, nodeId: 'subject-1', type: 'recall', energyLevel: 'low', estimatedMinutes: 30 },
+  { id: '5', title: 'Design review sync', time: '14:00', date: today, dueDate: today, category: 'work', subcategory: 'Meetings', completed: false, nodeId: 'chapter-2', type: 'revision', energyLevel: 'medium', estimatedMinutes: 45 },
+  { id: '6', title: 'Read 30 pages', time: '18:00', date: today, dueDate: today, category: 'learning', subcategory: 'Reading', completed: false, eduType: 'study', resourceLinks: ['https://example.com/book'], quickNotes: 'Chapter 4-6', nodeId: 'topic-4', type: 'study', energyLevel: 'high', estimatedMinutes: 40 },
+  { id: '7', title: 'Evening workout', time: '19:00', date: today, dueDate: today, category: 'health', subcategory: 'Fitness', completed: false, nodeId: 'subject-1', type: 'recall', energyLevel: 'medium', estimatedMinutes: 40 },
+  { id: '8', title: 'Journal & reflect', time: null, date: today, dueDate: today, category: 'personal', subcategory: 'Reflection', completed: false, nodeId: 'chapter-3', type: 'revision', energyLevel: 'low', estimatedMinutes: 20 },
+  { id: '9', title: 'Math homework Ch.5', time: '16:00', date: today, dueDate: today, category: 'learning', subcategory: 'Mathematics', completed: false, eduType: 'homework', quickNotes: 'Problems 1-20', nodeId: 'topic-2', type: 'test', energyLevel: 'high', estimatedMinutes: 50 },
+  { id: '10', title: 'Physics lab report', time: null, date: today, dueDate: today, category: 'learning', subcategory: 'Physics', completed: false, eduType: 'homework', resourceLinks: ['https://example.com/lab-guide'], nodeId: 'topic-5', type: 'study', energyLevel: 'medium', estimatedMinutes: 60 },
+];
+
+const defaultNodes: SyllabusNode[] = [
+  { id: 'subject-1', parentId: null, type: 'subject', title: 'Math', weightage: 9, status: 'learning', progress: 55 },
+  { id: 'chapter-1', parentId: 'subject-1', type: 'chapter', title: 'Algebra', weightage: 8, status: 'learning', progress: 45 },
+  { id: 'topic-1', parentId: 'chapter-1', type: 'topic', title: 'Linear equations', weightage: 7, status: 'learning', progress: 60 },
+  { id: 'topic-2', parentId: 'chapter-1', type: 'topic', title: 'Quadratic equations', weightage: 9, status: 'not_started', progress: 15 },
+  { id: 'chapter-2', parentId: 'subject-1', type: 'chapter', title: 'Calculus', weightage: 9, status: 'learning', progress: 35 },
+  { id: 'topic-3', parentId: 'chapter-2', type: 'topic', title: 'Derivatives', weightage: 8, status: 'learning', progress: 40 },
+  { id: 'topic-4', parentId: 'chapter-2', type: 'topic', title: 'Integrals', weightage: 7, status: 'revising', progress: 55 },
+  { id: 'chapter-3', parentId: 'subject-1', type: 'chapter', title: 'Statistics', weightage: 6, status: 'learning', progress: 25 },
+  { id: 'topic-5', parentId: 'chapter-3', type: 'topic', title: 'Probability', weightage: 8, status: 'not_started', progress: 20 },
 ];
 
 const defaultFocusLogs: FocusLog[] = [
@@ -158,7 +198,7 @@ const defaultFocusLogs: FocusLog[] = [
 
 const initialWeeklyStats: WeeklyStats = { focusHours: 0, tasksCompleted: 0, consistencyScore: 0 };
 
-const calculateWeeklyStats = (tasks: Task[], focusLogs: FocusLog[]): WeeklyStats => {
+const calculateWeeklyStats = (tasks: StructuredTask[], focusLogs: FocusLog[]): WeeklyStats => {
   const last7 = new Set<string>();
   let focusMinutes = 0;
   let completed = 0;
@@ -193,7 +233,8 @@ const calculateWeeklyStats = (tasks: Task[], focusLogs: FocusLog[]): WeeklyStats
 
 export const useStore = create<StoreState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
+      nodes: defaultNodes,
       tasks: defaultTasks,
       focusSession: { isActive: false, timeLeft: 25 * 60, mode: 'work', assignedTaskId: null },
       activeSession: { taskId: null, startTime: null, timeLeft: 25 * 60, isPaused: true, mode: 'work' },
@@ -248,10 +289,10 @@ export const useStore = create<StoreState>()(
         }),
 
       removeTask: (id) =>
-        set((state) => ({
-          tasks: state.tasks.filter((t) => t.id !== id),
-          weeklyStats: calculateWeeklyStats(state.tasks.filter((t) => t.id !== id), state.focusLogs),
-        })),
+        set((state) => {
+          const nextTasks = state.tasks.filter((t) => t.id !== id);
+          return { tasks: nextTasks, weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs) };
+        }),
 
       updateTask: (id, updates) =>
         set((state) => {
@@ -259,16 +300,13 @@ export const useStore = create<StoreState>()(
           return { tasks: nextTasks, weeklyStats: calculateWeeklyStats(nextTasks, state.focusLogs) };
         }),
 
-      setFocusSession: (session) =>
-        set((state) => ({ focusSession: { ...state.focusSession, ...session } })),
-
-      setActiveSession: (session) =>
-        set((state) => ({ activeSession: { ...state.activeSession, ...session } })),
+      setFocusSession: (session) => set((state) => ({ focusSession: { ...state.focusSession, ...session } })),
+      setActiveSession: (session) => set((state) => ({ activeSession: { ...state.activeSession, ...session } })),
 
       addFocusLog: (log) =>
         set((state) => {
           const nextLogs = [...state.focusLogs, { ...log, id: crypto.randomUUID() }];
-          const xpGain = Math.round(log.durationMinutes / 25 * 100);
+          const xpGain = Math.round((log.durationMinutes / 25) * 100);
           const nextXP = state.xp + xpGain;
           return {
             focusLogs: nextLogs,
@@ -284,7 +322,7 @@ export const useStore = create<StoreState>()(
           const date = entry.date || toDateStr(new Date());
           const nextHistory = [...state.sessionHistory, { date, duration: entry.duration, taskId: entry.taskId, completed: entry.completed }];
           const nextLogs = [...state.focusLogs, { id: crypto.randomUUID(), date, durationMinutes: entry.duration, taskId: entry.taskId }];
-          const xpGain = Math.round(entry.duration / 25 * 100);
+          const xpGain = Math.round((entry.duration / 25) * 100);
           const nextXP = state.xp + xpGain;
           return {
             sessionHistory: nextHistory,
@@ -296,8 +334,7 @@ export const useStore = create<StoreState>()(
           };
         }),
 
-      updateWeeklyStats: () =>
-        set((state) => ({ weeklyStats: calculateWeeklyStats(state.tasks, state.focusLogs) })),
+      updateWeeklyStats: () => set((state) => ({ weeklyStats: calculateWeeklyStats(state.tasks, state.focusLogs) })),
 
       setLockdown: (enabled) => set({ lockdown: enabled }),
       setExamDate: (date) => set({ examDate: date }),
@@ -321,10 +358,25 @@ export const useStore = create<StoreState>()(
       updateTaskStability: (id, stability) =>
         set((state) => ({ tasks: state.tasks.map((t) => (t.id === id ? { ...t, stability } : t)) })),
 
-      updateSettings: (s) =>
-        set((state) => ({ settings: { ...state.settings, ...s } })),
-
+      updateSettings: (s) => set((state) => ({ settings: { ...state.settings, ...s } })),
       setSelectedDate: (date) => set({ selectedDate: date }),
+
+      addNode: (node) =>
+        set((state) => ({ nodes: [...state.nodes, { ...node, id: crypto.randomUUID() }] })),
+
+      updateNodeStatus: (id, status) =>
+        set((state) => ({ nodes: state.nodes.map((node) => (node.id === id ? { ...node, status } : node)) })),
+
+      updateNodeProgress: (id, progress) =>
+        set((state) => ({ nodes: state.nodes.map((node) => (node.id === id ? { ...node, progress, status: progress >= 90 ? 'mastered' : node.status } : node)) })),
+
+      calculateAutoPriority: (nodeId) => {
+        const node = get().nodes.find((n) => n.id === nodeId);
+        if (!node) return 0;
+        const incompleteTasks = get().tasks.filter((task) => task.nodeId === nodeId && !task.completed).length;
+        const emphasis = Math.max(0, 10 - node.progress / 10);
+        return Math.round(node.weightage * emphasis + incompleteTasks * 8);
+      },
 
       reviewTask: async (taskId, quality) => {
         const { getReviewsByTask } = await import('@/store/vaultDB');
@@ -338,7 +390,7 @@ export const useStore = create<StoreState>()(
           const lastReview = existingReviews[existingReviews.length - 1];
           easiness = lastReview.easiness;
           interval = lastReview.interval;
-          reps = existingReviews.filter(r => r.quality >= 3).length;
+          reps = existingReviews.filter((r) => r.quality >= 3).length;
         }
 
         const mockCard: FlashcardItem = {
@@ -363,24 +415,16 @@ export const useStore = create<StoreState>()(
         });
 
         set((state) => ({
-          tasks: state.tasks.map(t =>
-            t.id === taskId ? { ...t, stability: updates.stability || 0 } : t
-          ),
+          tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, stability: updates.stability || 0 } : t)),
         }));
       },
 
       brainDump: async (taskId, userRecall, extractedText) => {
         const result = await compareRecall(userRecall, extractedText);
-        await new Promise<void>((resolve) => {
-          set((state) => {
-            state.reviewTask(taskId, result.suggestedQuality);
-            resolve();
-            return state;
-          });
-        });
+        await get().reviewTask(taskId, result.suggestedQuality);
         return result;
       },
     }),
-    { name: 'echos-storage' }
-  )
+    { name: 'echos-storage' },
+  ),
 );
