@@ -3,10 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sun, Moon, Monitor, Volume2, VolumeX, Bell, BellOff, Clock, Timer,
   Zap, Sparkles, ChevronRight, Play, RotateCcw, Eye, Vibrate, LayoutGrid,
+  Download, Upload,
 } from 'lucide-react';
 import { useStore, Settings, SoundSettings, ReminderSettings } from '@/store/useStore';
 import { fadeInUp, hoverLift, echosTransition } from '@/lib/motion';
 import { playSound, previewAllSounds } from '@/lib/sounds';
+import { exportFullBackup } from '@/lib/backup-expert';
+import { importFullBackup } from '@/lib/restore-expert';
 
 const defaultSettings: Settings = {
   timeFormat: '24h',
@@ -411,6 +414,29 @@ const SettingsScreen = () => {
             </div>
           </div>
         </Section>
+
+        <motion.div layout className="apple-glass p-6 rounded-[2.5rem] mt-6 space-y-4">
+          <h3 className="text-lg font-bold px-2">Data Management</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={exportFullBackup}
+              className="flex items-center justify-center gap-2 p-4 bg-primary/10 text-primary rounded-2xl hover:bg-primary/20 transition-all font-semibold"
+            >
+              <Download size={18} /> Export Vault
+            </button>
+
+            <label className="flex items-center justify-center gap-2 p-4 bg-secondary/50 border-2 border-dashed border-border rounded-2xl cursor-pointer hover:bg-secondary/80 transition-all font-semibold">
+              <Upload size={18} /> Restore Backup
+              <input
+                type="file"
+                className="hidden"
+                accept=".json"
+                onChange={(e) => e.target.files?.[0] && importFullBackup(e.target.files[0])}
+              />
+            </label>
+          </div>
+        </motion.div>
 
         {/* ─── DANGER ZONE ─── */}
         <motion.div layout className="glass-card p-4 sm:p-5">
