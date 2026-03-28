@@ -5,15 +5,29 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { NavigationProvider, useNavigationState } from '@/hooks/use-navigation-state';
 import { useIsMobile } from '@/hooks/use-mobile';
-import DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimport DesktopSidebarimp  <CommandPalette />
+import DesktopSidebar from '@/components/echos/DesktopSidebar';
+import BottomNav from '@/components/echos/BottomNav';
+import CommandPalette from '@/components/echos/CommandPalette';
+import Index from './pages/Index';
+import NotFound from './pages/NotFound';
+
+const queryClient = new QueryClient();
+
+const AppContent = () => {
+  const isMobile = useIsMobile();
+  const { activeTab, setActiveTab } = useNavigationState();
+
+  return (
+    <div className="flex h-screen w-full bg-background overflow-hidden text-foreground selection:bg-primary/20">
+      <CommandPalette />
 
       {!isMobile && (
-        <aside className="w-72 h-full bg-card/30 backdrop-blur-3xl border-r border-white/10">
+        <aside className="w-72 h-full bg-card/30 backdrop-blur-3xl border-r border-white/10 shrink-0">
           <DesktopSidebar activeTab={activeTab} onChange={setActiveTab} />
         </aside>
       )}
 
-      <main className="flex-1 h-full overflow-y-auto scroll-smooth-container">
+      <main className="flex-1 h-full overflow-y-auto scroll-smooth-container relative">
         <div className="mx-auto max-w-5xl px-6 pt-12 pb-32 safe-area-bottom">
           <Routes>
             <Route path="/" element={<Index activeTab={activeTab} />} />

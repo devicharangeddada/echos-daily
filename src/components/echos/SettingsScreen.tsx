@@ -3,13 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sun, Moon, Monitor, Volume2, VolumeX, Bell, BellOff, Clock, Timer,
   Zap, Sparkles, ChevronRight, Play, RotateCcw, Eye, Vibrate, LayoutGrid,
-  Download, Upload,
+  Download, Upload, ShieldCheck,
 } from 'lucide-react';
 import { useStore, Settings, SoundSettings, ReminderSettings } from '@/store/useStore';
 import { fadeInUp, hoverLift, echosTransition } from '@/lib/motion';
 import { playSound, previewAllSounds } from '@/lib/sounds';
-import { exportFullBackup } from '@/lib/backup-expert';
-import { importFullBackup } from '@/lib/restore-expert';
 
 const defaultSettings: Settings = {
   timeFormat: '24h',
@@ -415,24 +413,46 @@ const SettingsScreen = () => {
           </div>
         </Section>
 
-        <motion.div layout className="apple-glass p-6 rounded-[2.5rem] mt-6 space-y-4">
-          <h3 className="text-lg font-bold px-2">Data Management</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <motion.div {...fadeInUp} className="glass-card p-6 rounded-[2.5rem] mt-6 border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-3 mb-4">
+            <ShieldCheck className="text-primary w-6 h-6" />
+            <h3 className="text-lg font-bold">Knowledge Vault Backup</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-6">
+            Export your entire "Second Brain" structure, tasks, and progress to a secure file.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               type="button"
-              onClick={exportFullBackup}
-              className="flex items-center justify-center gap-2 p-4 bg-primary/10 text-primary rounded-2xl hover:bg-primary/20 transition-all font-semibold"
+              onClick={() => {
+                const data = localStorage.getItem('echos-storage');
+                const blob = new Blob([data || ''], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `EchOS_Vault_${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+              }}
+              className="flex items-center justify-center gap-2 p-4 bg-primary text-primary-foreground rounded-2xl hover:opacity-90 transition-all font-bold apple-bounce"
             >
               <Download size={18} /> Export Vault
             </button>
 
-            <label className="flex items-center justify-center gap-2 p-4 bg-secondary/50 border-2 border-dashed border-border rounded-2xl cursor-pointer hover:bg-secondary/80 transition-all font-semibold">
-              <Upload size={18} /> Restore Backup
+            <label className="flex items-center justify-center gap-2 p-4 bg-secondary border-2 border-dashed border-border rounded-2xl cursor-pointer hover:bg-secondary/80 transition-all font-bold apple-bounce">
+              <Upload size={18} /> Import Vault
               <input
                 type="file"
                 className="hidden"
                 accept=".json"
-                onChange={(e) => e.target.files?.[0] && importFullBackup(e.target.files[0])}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const text = await file.text();
+                    localStorage.setItem('echos-storage', text);
+                    window.location.reload();
+                  }
+                }}
               />
             </label>
           </div>
