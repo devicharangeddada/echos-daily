@@ -3,44 +3,40 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useMobile } from "@/hooks/use-mobile";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { NavigationProvider, useNavigationState } from "@/hooks/use-navigation-state";
+import { useIsMobile } from "@/hooks/use-mobile";
 import DesktopSidebar from "./components/echos/DesktopSidebar";
 import BottomNav from "./components/echos/BottomNav";
-import { useState } from "react";
+import CommandPalette from "./components/echos/CommandPalette";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const Layout = () => {
-  const isMobile = useMobile();
-  const [activeTab, setActiveTab] = useState("today");
+const AppContent = () => {
+  const isMobile = useIsMobile();
+  const { activeTab, setActiveTab } = useNavigationState();
 
   return (
-    <div className="relative flex min-h-screen w-full bg-background text-foreground">
+    <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/20 text-foreground">
+      <CommandPalette />
+
       {!isMobile && (
-        <DesktopSidebar activeTab={activeTab} onChange={setActiveTab} />
+        <aside className="w-72 h-full apple-glass border-r border-white/10">
+          <DesktopSidebar activeTab={activeTab} onChange={setActiveTab} />
+        </aside>
       )}
 
-      <main
-        className={`relative flex-1 overflow-y-auto ${
-          isMobile ? "pb-28 pt-6 px-4 sm:px-6" : "pb-8 pt-8 px-6 md:px-8"
-        }`}
-      >
-        <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-6xl flex-col">
+      <main className="flex-1 h-full overflow-y-auto scroll-smooth-container">
+        <div className="mx-auto max-w-5xl px-6 pt-12 safe-area-bottom">
           <Routes>
-            <Route
-              path="/"
-              element={<Index activeTab={activeTab} onChange={setActiveTab} />}
-            />
+            <Route path="/" element={<Index activeTab={activeTab} />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
       </main>
 
       {isMobile && <BottomNav active={activeTab} onChange={setActiveTab} />}
-      <Toaster />
-      <Sonner />
     </div>
   );
 };
@@ -49,7 +45,11 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <TooltipProvider>
-        <Layout />
+        <NavigationProvider>
+          <AppContent />
+        </NavigationProvider>
+        <Toaster />
+        <Sonner />
       </TooltipProvider>
     </BrowserRouter>
   </QueryClientProvider>

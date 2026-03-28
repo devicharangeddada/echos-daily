@@ -37,17 +37,18 @@ const NavItem = ({
   <button
     type="button"
     onClick={onClick}
-    className={`relative flex min-h-[56px] min-w-[64px] flex-col items-center justify-center gap-1 rounded-3xl px-3 py-2 text-[11px] font-semibold transition-colors duration-200 ${
+    className={`relative flex flex-1 flex-col items-center gap-1 rounded-3xl px-3 py-2 text-[10px] font-bold uppercase tracking-tighter transition-colors duration-200 apple-bounce ${
       active
-        ? "text-foreground"
-        : "text-muted-foreground hover:text-foreground"
+        ? "text-primary"
+        : "text-muted-foreground/60 hover:text-foreground"
     }`}
   >
     {active && (
       <span className="absolute inset-1 rounded-3xl bg-primary/10" />
     )}
     <Icon
-      className={`relative z-10 h-5 w-5 transition-colors ${
+      size={22}
+      className={`relative z-10 transition-colors ${
         active ? "text-primary" : ""
       }`}
     />
@@ -58,14 +59,16 @@ const NavItem = ({
 const BottomNav = ({ active, onChange, hidden }: BottomNavProps) => {
   if (hidden) return null;
 
+  const mobileTabs = tabs.slice(0, 5);
+
   return (
     <motion.nav
       initial={{ y: 28, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ ...echosTransition, duration: 0.28 }}
-      className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-lg items-center justify-between rounded-[1.75rem] border border-white/10 bg-surface/85 px-4 py-3 shadow-2xl shadow-black/15 backdrop-blur-2xl"
+      className="fixed inset-x-4 bottom-6 z-50 mx-auto flex max-w-lg items-center justify-between rounded-[1.75rem] apple-glass px-4 py-3 shadow-2xl shadow-black/15"
     >
-      {tabs.map((tab) => {
+      {mobileTabs.map((tab) => {
         const isActive = active === tab.id;
         return (
           <NavItem

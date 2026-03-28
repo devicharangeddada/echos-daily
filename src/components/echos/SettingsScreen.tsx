@@ -43,7 +43,14 @@ const SettingsScreen = () => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   if (!hasHydrated) {
-    return <div className="mx-auto max-w-2xl px-3 sm:px-5 pb-28 pt-10 sm:pt-14 text-center text-sm text-muted-foreground">Loading settings...</div>;
+    return (
+      <div className="mx-auto max-w-2xl px-3 sm:px-5 pb-28 pt-10 sm:pt-14 space-y-4">
+        <div className="h-10 w-48 rounded-2xl bg-muted/20 animate-pulse" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-24 w-full rounded-3xl bg-muted/15 animate-pulse" />
+        ))}
+      </div>
+    );
   }
 
   const settings: Settings = {

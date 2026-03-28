@@ -55,35 +55,45 @@ const SidebarItem = ({
 
 const DesktopSidebar = ({ activeTab, onChange }: DesktopSidebarProps) => {
   return (
-    <motion.aside
+    <motion.div
       initial={{ x: -24, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.26, ease: "easeOut" }}
-      className="w-72 min-w-[18rem] h-full glass-panel border-r border-white/10 flex flex-col p-5 shadow-2xl"
+      className="flex h-full flex-col p-4"
     >
-      <div className="px-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-        EchOS Daily
+      <div className="px-4 py-8 mb-4">
+        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/50 bg-clip-text text-transparent">
+          EchOS
+        </h1>
       </div>
 
-      <div className="mt-4 space-y-2 overflow-hidden">
+      <nav className="flex-1 space-y-1">
         {sidebarItems.map((item) => {
+          const isActive = activeTab === item.id;
           const Icon = item.icon;
           return (
-            <SidebarItem
+            <button
               key={item.id}
-              icon={Icon}
-              label={item.label}
-              active={activeTab === item.id}
               onClick={() => onChange(item.id)}
-            />
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 ${
+                isActive
+                  ? "bg-primary/10 text-primary shadow-sm"
+                  : "text-muted-foreground hover:bg-foreground/5"
+              }`}
+            >
+              <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-sm font-semibold">{item.label}</span>
+              {isActive && (
+                <motion.div
+                  layoutId="active"
+                  className="ml-auto w-1.5 h-1.5 rounded-full bg-primary"
+                />
+              )}
+            </button>
           );
         })}
-      </div>
-
-      <div className="mt-auto rounded-[1.75rem] border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
-        Designed for calm focus and premium productivity.
-      </div>
-    </motion.aside>
+      </nav>
+    </motion.div>
   );
 };
 
