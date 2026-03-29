@@ -102,6 +102,9 @@ const FocusScreen = () => {
     };
   }, [activeProfile]);
 
+  const focusSessionRef = useRef(focusSession);
+  focusSessionRef.current = focusSession;
+
   useEffect(() => {
     if (!isActive) {
       if (tickRef.current !== null) {
@@ -113,12 +116,13 @@ const FocusScreen = () => {
 
     lastTimestampRef.current = Date.now();
     tickRef.current = window.setInterval(() => {
-      if (!focusSession.isActive) return;
+      const session = focusSessionRef.current;
+      if (!session.isActive) return;
       const now = Date.now();
       const diff = Math.max(0, Math.floor((now - lastTimestampRef.current) / 1000));
       if (diff > 0) {
         lastTimestampRef.current += diff * 1000;
-        const remaining = Math.max(0, focusSession.timeLeft - diff);
+        const remaining = Math.max(0, session.timeLeft - diff);
         setFocusSession({ timeLeft: remaining, isActive: remaining > 0 });
         setActiveSession({ timeLeft: remaining, isPaused: false });
       }
@@ -130,7 +134,7 @@ const FocusScreen = () => {
         tickRef.current = null;
       }
     };
-  }, [isActive, focusSession.isActive, focusSession.timeLeft, setFocusSession, setActiveSession, focusSession]);
+  }, [isActive, setFocusSession, setActiveSession]);
 
   const reset = useCallback(() => {
     const initial = focusSession.mode === 'work' ? WORK_DURATION : BREAK_DURATION;
