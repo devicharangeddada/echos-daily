@@ -270,8 +270,8 @@ export const useStore = create<StoreState>()(
     focusSession: { isActive: false, timeLeft: 25 * 60, assignedTaskId: null, isPaused: false, startTime: null, topicId: null, duration: 25 * 60, mode: 'work' },
     setFocusSession: (session) =>
       set((state) => ({ focusSession: { ...state.focusSession, ...session } })),
-    activeSession: false,
-    setActiveSession: (active) => set({ activeSession: active }),
+    activeSession: {},
+    setActiveSession: (session) => set((state) => ({ activeSession: { ...state.activeSession, ...session } })),
     focusLogs: [],
     addFocusLog: (log) =>
       set((state) => ({
