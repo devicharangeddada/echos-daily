@@ -16,6 +16,13 @@ export interface InfiniteNode {
   weightage: number;
 }
 
+export interface TaskResource {
+  id: string;
+  label: string;
+  url: string;
+  type: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -29,6 +36,9 @@ export interface Task {
   dueDate?: string;
   notes?: string;
   quickNotes?: string;
+  stability?: number;
+  nodeId?: string;
+  resources?: TaskResource[];
   eduType?: 'study' | 'homework';
   subCategory?: string;
   links?: string[];
@@ -71,10 +81,16 @@ export interface FocusLog {
   id: string;
   date: string;
   duration: number;
+  durationMinutes: number;
   topicId?: string;
 }
 
 export interface FocusSession {
+  isActive: boolean;
+  timeLeft: number;
+  assignedTaskId: string | null;
+  isPaused: boolean;
+  startTime: number | null;
   topicId: string | null;
   duration: number;
   mode: 'work' | 'break';
