@@ -39,11 +39,6 @@ export default defineConfig(({ mode }) => ({
     })
   ].filter(Boolean),
   resolve: {
-    alias: [
-      { find: '@', replacement: path.resolve(__dirname, './src') },
-      { find: 'react-dom/client', replacement: path.resolve(__dirname, './node_modules/react-dom/client') },
-      { find: 'react/jsx-runtime', replacement: path.resolve(__dirname, './node_modules/react/jsx-runtime') },
-      { find: 'react/jsx-dev-runtime', replacement: path.resolve(__dirname, './node_modules/react/jsx-dev-runtime') },
-    ],
+    alias: [{ find: '@', replacement: path.resolve(__dirname, './src') }],
   },
 }));
