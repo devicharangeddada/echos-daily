@@ -22,7 +22,12 @@ const categoryColors: Record<Task['category'], string> = {
 const TaskCard = ({ task, onToggle, isMissed }: TaskCardProps) => {
   const [showDetails, setShowDetails] = useState(false);
 
-  const success  const success  const success  const success  const success  const success  const success  const success  const success  const success  const success  ctype = 'triangle';
+  const successChime = () => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
       osc.frequency.value = 660;
       gain.gain.value = 0.09;
       osc.connect(gain);
