@@ -154,11 +154,11 @@ interface StoreState {
   // Focus
   focusSession: FocusSession;
   setFocusSession: (session: Partial<FocusSession>) => void;
-  activeSession: boolean;
-  setActiveSession: (active: boolean) => void;
+  activeSession: Record<string, any>;
+  setActiveSession: (session: Record<string, any>) => void;
   focusLogs: FocusLog[];
   addFocusLog: (log: Partial<FocusLog>) => void;
-  addSessionToHistory: (session: { duration: number; topicId?: string; date?: string }) => void;
+  addSessionToHistory: (session: Record<string, any>) => void;
 
   // Calendar
   selectedDate: string;
