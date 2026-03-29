@@ -3,14 +3,32 @@ import { useStore, InfiniteNode } from '@/store/useStore';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import EditableTitle from '@/components/ui/editable-title';
 import { Textarea } from '@/components/ui/textarea';
+import { useState, useEffect } from 'react';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
 const NodeInspector = () => {
   const { nodes, selectedNodeId, updateNode, deleteNode, setSelectedNodeId } = useStore();
   const selectedNode = nodes.find((node: InfiniteNode) => node.id === selectedNodeId) ?? null;
+  const [notes, setNotes] = useState(selectedNode?.notes ?? '');
+
+  useEffect(() => {
+    if (selectedNode) {
+      setNotes(selectedNode.notes ?? '');
+    }
+  }, [selectedNodeId]);
 
   if (!selectedNode) return null;
+
+  const handleNotesChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNotes(event.target.value);
+  };
+
+  const handleBlur = () => {
+    if (selectedNode && notes !== (selectedNode.notes ?? '')) {
+      updateNode(selectedNode.id, { notes });
+    }
+  };
 
   return (
     <Sheet open={!!selectedNode} onOpenChange={(open) => { if (!open) setSelectedNodeId(null); }}>
@@ -38,8 +56,9 @@ const NodeInspector = () => {
 
             <Textarea
               placeholder="Detailed notes or description..."
-              value={selectedNode.notes ?? ''}
-              onChange={(event) => updateNode(selectedNode.id, { notes: event.target.value })}
+              value={notes}
+              onChange={handleNotesChange}
+              onBlur={handleBlur}
               className="bg-secondary/30 border-none rounded-2xl p-4"
             />
           </div>
