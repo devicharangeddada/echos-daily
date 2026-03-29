@@ -83,6 +83,7 @@ export interface FocusLog {
   duration: number;
   durationMinutes: number;
   topicId?: string;
+  taskId?: string;
 }
 
 export interface FocusSession {
@@ -156,8 +157,8 @@ interface StoreState {
   activeSession: boolean;
   setActiveSession: (active: boolean) => void;
   focusLogs: FocusLog[];
-  addFocusLog: (log: Omit<FocusLog, 'id'>) => void;
-  addSessionToHistory: (session: { duration: number; topicId?: string }) => void;
+  addFocusLog: (log: Partial<FocusLog>) => void;
+  addSessionToHistory: (session: { duration: number; topicId?: string; date?: string }) => void;
 
   // Calendar
   selectedDate: string;
@@ -266,7 +267,7 @@ export const useStore = create<StoreState>()(
       })),
 
     // Focus
-    focusSession: { topicId: null, duration: 25 * 60, mode: 'work' },
+    focusSession: { isActive: false, timeLeft: 25 * 60, assignedTaskId: null, isPaused: false, startTime: null, topicId: null, duration: 25 * 60, mode: 'work' },
     setFocusSession: (session) =>
       set((state) => ({ focusSession: { ...state.focusSession, ...session } })),
     activeSession: false,
@@ -274,13 +275,13 @@ export const useStore = create<StoreState>()(
     focusLogs: [],
     addFocusLog: (log) =>
       set((state) => ({
-        focusLogs: [...state.focusLogs, { ...log, id: crypto.randomUUID() }],
+        focusLogs: [...state.focusLogs, { ...log, id: crypto.randomUUID() } as FocusLog],
       })),
     addSessionToHistory: (session) =>
       set((state) => ({
         focusLogs: [
           ...state.focusLogs,
-          { id: crypto.randomUUID(), date: toDateStr(new Date()), duration: session.duration, topicId: session.topicId },
+          { id: crypto.randomUUID(), date: toDateStr(new Date()), duration: session.duration, durationMinutes: Math.round(session.duration / 60), topicId: session.topicId } as FocusLog,
         ],
       })),
 

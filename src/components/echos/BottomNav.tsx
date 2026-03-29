@@ -29,7 +29,7 @@ const NavItem = ({
   active,
   onClick,
 }: {
-  icon: React.ComponentType<{ className?: string; size?: number }>;
+  icon: React.ComponentType<any>;
   label: string;
   active?: boolean;
   onClick: () => void;
