@@ -1,12 +1,12 @@
 import { Command } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { useNavigationState } from '@/hooks/use-navigation-state';
 
 export default function CommandPalette() {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const { tasks, nodes } = useStore((state) => ({ tasks: state.tasks, nodes: state.nodes }));
-  const { setActiveTab } = useNavigationState();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -42,7 +42,10 @@ export default function CommandPalette() {
             <button
               key={task.id}
               type="button"
-              onClick={() => setActiveTab('education')}
+              onClick={() => {
+                navigate('/education');
+                setOpen(false);
+              }}
               className="w-full text-left px-4 py-3 rounded-3xl hover:bg-foreground/10 transition-colors"
             >
               <p className="font-semibold">{task.title}</p>
@@ -54,7 +57,10 @@ export default function CommandPalette() {
             <button
               key={node.id}
               type="button"
-              onClick={() => setActiveTab('syllabus')}
+              onClick={() => {
+                navigate('/syllabus');
+                setOpen(false);
+              }}
               className="w-full text-left px-4 py-3 rounded-3xl hover:bg-foreground/10 transition-colors"
             >
               <p className="font-semibold">{node.title}</p>

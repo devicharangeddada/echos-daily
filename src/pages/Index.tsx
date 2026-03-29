@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "@/hooks/useTheme";
+import { useParams } from "react-router-dom";
 import TodayScreen from "@/components/echos/TodayScreen";
 import FocusScreen from "@/components/echos/FocusScreen";
 import EducationScreen from "@/components/echos/EducationScreen";
@@ -10,7 +10,7 @@ import SyllabusTree from "@/components/echos/SyllabusTree";
 import SettingsScreen from "@/components/echos/SettingsScreen";
 import { echosTransition } from "@/lib/motion";
 
-const screens: Record<string, React.FC> = {
+const screens = {
   today: TodayScreen,
   calendar: CalendarScreen,
   focus: FocusScreen,
@@ -19,22 +19,20 @@ const screens: Record<string, React.FC> = {
   syllabus: SyllabusTree,
   analytics: AnalyticsScreen,
   settings: SettingsScreen,
-};
+} as const;
 
-interface IndexProps {
-  activeTab: string;
-}
+type TabType = 'today' | 'calendar' | 'focus' | 'education' | 'exam' | 'syllabus' | 'analytics' | 'settings';
 
-const Index = ({ activeTab }: IndexProps) => {
-  const Screen = screens[activeTab] || TodayScreen;
-
-  useTheme();
+const Index = () => {
+  const { tab } = useParams<{ tab?: TabType }>();
+  const activeTab = tab ?? "today";
+  const Screen = screens[activeTab] ?? TodayScreen;
 
   return (
     <div className="bg-background text-foreground">
       <AnimatePresence mode="wait">
         <motion.div
-          key={activeTab}
+          key={selectedTab}
           initial={{ opacity: 0, y: 15, filter: "blur(10px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)", transition: echosTransition }}
           exit={{ opacity: 0, y: -15, filter: "blur(10px)" }}

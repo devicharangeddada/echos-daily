@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, RotateCcw, X, ChevronDown, Check } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { fadeInUp, echosTransition, hoverLift } from '@/lib/motion';
 
 const WORK_DURATION = 25 * 60;

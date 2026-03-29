@@ -1,9 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Toaster as Sonner } from '@/components/ui/sonner';
-import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { NavigationProvider, useNavigationState } from '@/hooks/use-navigation-state';
+import { useTheme } from '@/hooks/useTheme';
 import { useIsMobile } from '@/hooks/use-mobile';
 import DesktopSidebar from '@/components/echos/DesktopSidebar';
 import BottomNav from '@/components/echos/BottomNav';
@@ -14,8 +13,8 @@ import NotFound from './pages/NotFound';
 const queryClient = new QueryClient();
 
 const AppContent = () => {
+  useTheme();
   const isMobile = useIsMobile();
-  const { activeTab, setActiveTab } = useNavigationState();
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden text-foreground selection:bg-primary/20">
@@ -23,20 +22,21 @@ const AppContent = () => {
 
       {!isMobile && (
         <aside className="w-72 h-full bg-card/30 backdrop-blur-3xl border-r border-white/10 shrink-0">
-          <DesktopSidebar activeTab={activeTab} onChange={setActiveTab} />
+          <DesktopSidebar />
         </aside>
       )}
 
       <main className="flex-1 h-full overflow-y-auto scroll-smooth-container relative">
         <div className="mx-auto max-w-5xl px-6 pt-12 pb-32 safe-area-bottom">
           <Routes>
-            <Route path="/" element={<Index activeTab={activeTab} />} />
+            <Route path="/" element={<Index />} />
+            <Route path="/:tab" element={<Index />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
       </main>
 
-      {isMobile && <BottomNav active={activeTab} onChange={setActiveTab} />}
+      {isMobile && <BottomNav />}
     </div>
   );
 };
@@ -45,10 +45,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <TooltipProvider>
-        <NavigationProvider>
-          <AppContent />
-        </NavigationProvider>
-        <Toaster />
+        <AppContent />
         <Sonner />
       </TooltipProvider>
     </BrowserRouter>

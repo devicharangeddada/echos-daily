@@ -8,6 +8,7 @@ import {
   TreePine,
   Settings,
 } from "lucide-react";
+import { NavLink } from "react-router-dom";
 import { echosTransition } from "@/lib/motion";
 
 const tabs = [
@@ -17,46 +18,7 @@ const tabs = [
   { id: "settings", label: "Settings", icon: Settings },
 ] as const;
 
-interface BottomNavProps {
-  active: string;
-  onChange: (tab: string) => void;
-  hidden?: boolean;
-}
-
-const NavItem = ({
-  icon: Icon,
-  label,
-  active,
-  onClick,
-}: {
-  icon: React.ComponentType<any>;
-  label: string;
-  active?: boolean;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`relative flex flex-1 flex-col items-center gap-1 rounded-3xl px-3 py-2 text-[10px] font-bold uppercase tracking-tighter transition-colors duration-200 apple-bounce ${
-      active
-        ? "text-primary"
-        : "text-muted-foreground/60 hover:text-foreground"
-    }`}
-  >
-    {active && (
-      <span className="absolute inset-1 rounded-3xl bg-primary/10" />
-    )}
-    <Icon
-      size={22}
-      className={`relative z-10 transition-colors ${
-        active ? "text-primary" : ""
-      }`}
-    />
-    <span className="relative z-10">{label}</span>
-  </button>
-);
-
-const BottomNav = ({ active, onChange, hidden }: BottomNavProps) => {
+const BottomNav = ({ hidden }: { hidden?: boolean }) => {
   if (hidden) return null;
 
   const mobileTabs = tabs.slice(0, 5);
@@ -68,18 +30,34 @@ const BottomNav = ({ active, onChange, hidden }: BottomNavProps) => {
       transition={{ ...echosTransition, duration: 0.28 }}
       className="fixed inset-x-4 bottom-6 z-50 mx-auto flex max-w-lg items-center justify-between rounded-[1.75rem] apple-glass px-4 py-3 shadow-2xl shadow-black/15"
     >
-      {mobileTabs.map((tab) => {
-        const isActive = active === tab.id;
-        return (
-          <NavItem
-            key={tab.id}
-            icon={tab.icon}
-            label={tab.label}
-            active={isActive}
-            onClick={() => onChange(tab.id)}
-          />
-        );
-      })}
+      {mobileTabs.map((tab) => (
+        <NavLink
+          key={tab.id}
+          to={`/${tab.id}`}
+          className={({ isActive }) =>
+            `relative flex flex-1 flex-col items-center gap-1 rounded-3xl px-3 py-2 text-[10px] font-bold uppercase tracking-tighter transition-colors duration-200 apple-bounce ${
+              isActive
+                ? "text-primary"
+                : "text-muted-foreground/60 hover:text-foreground"
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <span className="absolute inset-1 rounded-3xl bg-primary/10" />
+              )}
+              <tab.icon
+                size={22}
+                className={`relative z-10 transition-colors ${
+                  isActive ? "text-primary" : ""
+                }`}
+              />
+              <span className="relative z-10">{tab.label}</span>
+            </>
+          )}
+        </NavLink>
+      ))}
     </motion.nav>
   );
 };
