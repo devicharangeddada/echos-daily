@@ -70,17 +70,17 @@ const AnalyticsScreen = () => {
       <motion.div {...fadeInUp} className="grid grid-cols-3 gap-3 mb-6">
         <motion.div {...hoverLift} className="glass-card p-4 flex flex-col items-center justify-center">
           <Clock className="h-4 w-4 text-muted-foreground mb-2" />
-          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{weeklyStats?.focusHours ?? totalDeepWorkHours}h</span>
+          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{totalDeepWorkHours}h</span>
           <span className="text-caption mt-0.5">Focus Hours</span>
         </motion.div>
         <motion.div {...hoverLift} className="glass-card p-4 flex flex-col items-center justify-center">
           <TrendingUp className="h-4 w-4 text-muted-foreground mb-2" />
-          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{weeklyStats?.tasksCompleted ?? totalCompleted}</span>
+          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{totalCompleted}</span>
           <span className="text-caption mt-0.5">Tasks Completed</span>
         </motion.div>
         <motion.div {...hoverLift} className="glass-card p-4 flex flex-col items-center justify-center">
           <Flame className="h-4 w-4 text-muted-foreground mb-2" />
-          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{weeklyStats?.consistencyScore ?? streak}%</span>
+          <span className="text-2xl font-light text-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>{streak}%</span>
           <span className="text-caption mt-0.5">Consistency Score</span>
         </motion.div>
       </motion.div>

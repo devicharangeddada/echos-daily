@@ -58,7 +58,7 @@ export default function CommandPalette() {
               className="w-full text-left px-4 py-3 rounded-3xl hover:bg-foreground/10 transition-colors"
             >
               <p className="font-semibold">{node.title}</p>
-              <p className="text-xs text-muted-foreground">{node.type} · {node.progress}% mastery</p>
+              <p className="text-xs text-muted-foreground">{node.type} · {node.mastery}% mastery</p>
             </button>
           ))}
         </div>

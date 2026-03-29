@@ -5,7 +5,7 @@ const blobToBase64 = (blob: Blob | Uint8Array): Promise<string> => {
     const reader = new FileReader();
     reader.onerror = () => reject(reader.error);
     reader.onloadend = () => resolve(reader.result as string);
-    reader.readAsDataURL(blob instanceof Uint8Array ? new Blob([blob]) : blob);
+    reader.readAsDataURL(blob instanceof Uint8Array ? new Blob([blob as unknown as BlobPart]) : blob);
   });
 };
 
